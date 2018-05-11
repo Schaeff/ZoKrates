@@ -1,8 +1,4 @@
 // XOR
 
-import "./and.code" as AND
-import "./or.code" as OR
-import "./not.code" as NOT
-
 def main(x, y):
-	return AND(OR(x, y), NOT(AND(x,y)))
+	return x + y - 2 * x * y
