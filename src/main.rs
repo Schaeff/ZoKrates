@@ -31,6 +31,9 @@ mod optimizer;
 mod r1cs;
 mod field;
 mod verification;
+mod autoparse;
+mod zokrates;
+
 #[cfg(not(feature = "nolibsnark"))]
 mod libsnark;
 

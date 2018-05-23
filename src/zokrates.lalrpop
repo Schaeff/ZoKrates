@@ -1,0 +1,216 @@
+use std::str::FromStr;
+use absy::*;
+use parameter::Parameter;
+use imports::*;
+use std::path::PathBuf;
+use field::{Field, FieldPrime};
+
+grammar;
+
+comma<T>: Vec<T> = {
+	<v:(<T> ",")*> <e:T?> => match e {
+        None => v,
+        Some(e) => {
+            let mut v = v;
+            v.push(e);
+            v
+        }
+    }
+};
+
+multi_comma<T>: Vec<T> = {
+	<v:(<T> ",")+> <e:T?> => match e {
+        None => v,
+        Some(e) => {
+            let mut v = v;
+            v.push(e);
+            v
+        }
+    }
+};
+
+if_then_else: () = {
+	"if" expr comparator expr "then" expr "else" expr "fi"
+};
+
+// Grammar:
+//
+// <prog> ::= <functions>
+
+pub prog: () = comment* header functions;
+
+header: () = import*;
+
+import: () = "import" path alias? ";"?;
+
+alias: () = "as" ide;
+
+//
+// <functions> ::= <function> <functions>
+
+functions: () = function*;
+
+//
+// <function> ::= `def' <ide> `(' <arguments> `):\\n' <stat-list>
+
+function: () = "def" ide "(" arguments "):" statements;
+
+//
+// <arguments> ::= <ide> <more-args> | $\varepsilon$
+//
+// <more-args> ::= `,' <ide> <more-args>  | $\varepsilon$
+
+arguments = comma<ide>;
+
+//
+// <stat-list> ::= <statement> <stat-list> | <return>
+
+statements: () = statement*;
+
+//
+// <expressions> ::= <expr> <more-expr> | $\varepsilon$
+//
+// <more-exprs> ::= `,' <ide> <more-args>  | $\varepsilon$
+//
+
+expressions: () = comma<expr>;
+
+
+// <statement> ::= <ide> <statement'>
+//         | `if' <expr> <comparator> <expr> `then' <expr> `else' <expr> `fi' <expr'> `==' <expr> `\\n'
+//         | `(' <expr> `)' <term'> <expr'> `==' <expr> `\\n'
+//         | <num> <term'> <expr'> `==' <expr> `\\n'
+//         | `#' <ide> `=' <expr> `\\n'
+//
+
+statement: () = {
+	ide statement_ ";",
+	if_then_else expr_? "==" expr ";",
+	"(" expr ")" term_? expr_? "==" expr ";",
+	num term_? expr_? "==" expr ";",
+	multi_comma<ide> "=" fcall ";",
+	for_loop,
+	"return" expr ";"
+};
+
+// <statement'> ::= `=' <expr> `\\n'
+//         | <term'> <expr'> `==' <expr> `\\n'
+//
+
+statement_: () = {
+	"=" expr,
+	term_? expr_? "==" expr
+};
+
+// <expr> ::= `if' <expr> <comparator> <expr> `then' <expr> `else' <expr> `fi' <expr'>
+//         | `(' <expr> `)' <term'> <expr'>
+//         | <ide> <term'> <expr'>
+//         | <num> <term'> <expr'>
+//         | <ide> `(' <expressions> `)' <term'> <expr'>
+//
+
+expr: () = {
+	if_then_else expr_?,
+	"(" expr ")" term_? expr_?,
+	ide term_? expr_?,
+	num term_? expr_?,
+	fcall term_? expr_?
+};
+
+// <expr'> ::= `+' <term> <expr'>
+//         | `-' <term> <expr'>
+//         | `**' <num> <term'> <expr'>
+//         | $\varepsilon$
+
+expr_: () = {
+	"+" term expr_?,
+	"-" term expr_?,
+	exp term_? expr_?,
+};
+
+//
+// <term> ::= <factor> <term'>
+//
+
+term: () = {
+	factor term_?
+};
+
+// <term'> ::= `*' <term>
+//         | `/' <term>
+//         | $\varepsilon$
+
+term_: () = {
+	"*" term,
+	"/" term,
+};
+
+//
+// <factor> ::= `if' <expr> <comparator> <expr> `then' <expr> `else' <expr> `fi' <expr'> `**' <num>
+//         | `(' <expr> `)' <factor'>
+//         | <ide> <factor'>
+//         | <num> <factor'>
+//         | <ide> `(' <expressions> `)' <factor'>
+//
+
+factor: () = {
+	//if_then_else expr_ exp,
+	"(" expr ")",
+	ide,
+	num,
+	fcall
+};
+
+
+// <factor'> ::= <term'> <expr'> `**' <num>
+//         | $\varepsilon$
+//
+
+factor_: () = {
+	(term_? expr_? exp)
+};
+
+// <comparator> ::= `<' | `<=' | `==' | `>=' | `>'
+
+comparator: () = {
+	"<",
+	">",
+	"==",
+	"<=",
+	">=",
+};
+
+//
+// <num> ::= `d' <num> | `d'
+//
+
+num: u32 = {
+    r"[0-9]+" => u32::from_str(<>).unwrap()
+};
+
+// <ide> ::= `l' <trail> | `l'
+//
+
+ide: () = r"[a-zA-Z][a-zA-Z0-9]*";
+
+// <trail> ::= `d' <trail> | `l' <trail> | `d' | `l'
+
+// quoted path for imports, cannot contain NUL or "
+
+path: () = r#""[^\0"]+""#;
+
+// function call
+
+fcall: () = ide "(" expressions ")";
+
+// for loop
+
+for_loop: () = "for" ide "in" num ".." num "do" statements "endfor";
+
+// comment
+
+comment: () = r"//.*\n";
+
+// exponentiation
+
+exp: () = "**" num;

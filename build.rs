@@ -1,7 +1,11 @@
 #[cfg(not(feature = "nolibsnark"))]
 extern crate gcc;
+extern crate lalrpop;
+
 
 fn main() {
+    lalrpop::process_root().unwrap();
+
     #[cfg(not(feature = "nolibsnark"))]
     {
         gcc::Build::new()
