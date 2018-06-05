@@ -119,8 +119,7 @@ char* _sha256Witness()
 
     pb_variable<FieldT> ZERO;
     ZERO.allocate(pb, "ZERO");
-    pb.val(ZERO) = 0;
-   
+  
     digest_variable<FieldT> output(pb, 256, "output");
 
 
