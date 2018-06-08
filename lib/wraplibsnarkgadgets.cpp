@@ -74,7 +74,13 @@ char* _sha256Constraints()
 
     auto result = new char[json.size()];
     memcpy(result, json.c_str(), json.size() + 1);
-    return result;
+
+    hash->generate_r1cs_witness();
+    auto json = array_to_json(pb);
+    auto result2 = new char[json.size()];
+    memcpy(result2, json.c_str(), json.size() + 1);
+    
+    return (result, result2, pb.is_satisfied());
 }
 
 std::string array_to_json(protoboard<FieldT> pb)
