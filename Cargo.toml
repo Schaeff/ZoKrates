@@ -14,6 +14,7 @@ libc = "0.2.0"
 num = "0.1.36"
 lazy_static = "0.1.*"
 reduce = "0.1.1"
+byteorder = "1.2.3"
 # cli
 clap = "2.26.2"
 # serialization and deserialization

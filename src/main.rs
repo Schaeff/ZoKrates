@@ -17,6 +17,7 @@ extern crate serde_json;
 extern crate serde_derive;
 extern crate bincode;
 extern crate regex;
+extern crate byteorder;
 
 mod absy;
 mod flat_absy;

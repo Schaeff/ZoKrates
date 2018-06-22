@@ -5,6 +5,8 @@ use libsnark::*;
 use serde_json;
 use standard;
 
+use byteorder::{BigEndian, WriteBytesExt};
+
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct DirectiveStatement {
 	pub inputs: Vec<String>,
@@ -96,6 +98,13 @@ impl<T: Field> Executable<T> for RustHelper {
 	fn execute(&self, inputs: &Vec<T>) -> Result<Vec<T>, String> {
 		match self {
 			RustHelper::Identity => Ok(inputs.clone()),
+			//RustHelper::U32toField => Ok(inputs.iter().rev().enumerate().fold(0, |acc, (index, bit)| acc + 2 ** i))
+			RustHelper::FieldToU32 => {
+				let input = inputs[0];
+				let u = input.to_dec_string().parse::<u32>().unwrap();
+				let mut rdr = Cursor::new(vec![u]);
+				
+			}
 		}
 	}
 }
