@@ -17,7 +17,9 @@ extern crate serde_json;
 extern crate serde_derive;
 extern crate bincode;
 extern crate regex;
+extern crate bitreader;
 extern crate byteorder;
+
 
 mod absy;
 mod flat_absy;
@@ -36,6 +38,7 @@ mod field;
 mod verification;
 mod standard;
 mod helpers;
+mod u32_utils;
 #[cfg(not(feature = "nolibsnark"))]
 mod libsnark;
 
