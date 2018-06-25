@@ -1,11 +1,13 @@
 use std::fmt;
 use field::{Field};
 
+#[cfg(not(feature = "nolibsnark"))]
 use libsnark::*;
+
 use serde_json;
 use standard;
 
-use byteorder::{BigEndian, WriteBytesExt, ReadBytesExt};
+use byteorder::{BigEndian, WriteBytesExt};
 use bitreader::BitReader;
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
@@ -52,7 +54,8 @@ impl fmt::Display for LibsnarkGadgetHelper {
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub enum RustHelper {
 	Identity,
-	FieldToU32
+	FieldToU32,
+	U32ToField
 }
 
 impl fmt::Display for RustHelper {
@@ -60,6 +63,7 @@ impl fmt::Display for RustHelper {
     	match *self {
     		RustHelper::Identity => write!(f, "Identity"),
     		RustHelper::FieldToU32 => write!(f, "FieldToU32"),
+    		RustHelper::U32ToField => write!(f, "U32ToField"),
     	}
     }
 }
@@ -77,13 +81,21 @@ impl<T: Field> Executable<T> for LibsnarkGadgetHelper {
 	fn execute(&self, inputs: &Vec<T>) -> Result<Vec<T>, String> {
 		match self {
 			LibsnarkGadgetHelper::Sha256Compress => {
-				let witness_result: Result<standard::Witness, serde_json::Error> = serde_json::from_str(&get_sha256_witness(inputs));
-
-				if let Err(e) = witness_result {
-					return Err(format!("{}", e));
+				#[cfg(feature = "nolibsnark")]
+				{
+					Err(format!("Libsnark is not available"))
 				}
 
-				Ok(witness_result.unwrap().variables.iter().map(|&i| T::from(i)).collect())
+				#[cfg(not(feature = "nolibsnark"))]
+				{
+					let witness_result: Result<standard::Witness, serde_json::Error> = serde_json::from_str(&get_sha256_witness(inputs));
+
+					if let Err(e) = witness_result {
+						return Err(format!("{}", e));
+					}
+
+					Ok(witness_result.unwrap().variables.iter().map(|&i| T::from(i)).collect())
+				}
 			},
 		}
 	}
@@ -102,21 +114,46 @@ impl<T: Field> Executable<T> for RustHelper {
 		match self {
 			RustHelper::Identity => Ok(inputs.clone()),
 			RustHelper::FieldToU32 => {
-
+				// only expected to work if the input is smaller than 2^64
+				// get the input
 				let input = &inputs[0];
-				let r = input.to_dec_string().parse::<u32>().unwrap();
 
+				// convert it to u64 as it could be bigger than 2^32
+				let r_overflow = input.to_dec_string().parse::<u64>().unwrap();
+
+				// only keep the u32 part
+				let r = r_overflow % (2u64.pow(32));
+
+				// determine whether an overflow happened
+				let has_overflow = r != r_overflow;
+
+				// convert to vector of bytes
 				let mut wtr = vec![];
-				wtr.write_u32::<BigEndian>(r).unwrap();
+				wtr.write_u32::<BigEndian>(r as u32).unwrap();
 
 				let mut reader = BitReader::new(&wtr);
 
+				// convert to vector of bits
 				let mut bit_vect = vec![];
 				for i in 0..32 {
 					bit_vect.push(reader.read_u32(1).unwrap());
 				}
 
+				bit_vect.push(has_overflow as u32);
+
+				// convert to Field elements and return
 				Ok(bit_vect.iter().map(|&i| T::from(i)).collect())
+			},
+			RustHelper::U32ToField => {
+				Ok(vec![
+					T::from(
+						inputs.iter().enumerate()
+							.map(|(i, v)| {
+								v.to_dec_string().parse::<u32>().unwrap() * 2u32.pow((31 - i) as u32)
+							})
+							.fold(0, |acc, v| acc + v))
+					]
+				)
 			}
 		}
 	}
@@ -126,7 +163,8 @@ impl Signed for RustHelper {
 	fn get_signature(&self) -> (usize, usize) {
 		match self {
 			RustHelper::Identity => (1, 1),
-			RustHelper::FieldToU32 => (1, 32),
+			RustHelper::FieldToU32 => (1, 33),
+			RustHelper::U32ToField => (32, 1)
 		}
 	}
 }
@@ -178,7 +216,7 @@ mod tests {
 		let f2u = RustHelper::FieldToU32;
 		let inputs = vec![4294967295u32];
 		let r = f2u.execute(&inputs.iter().map(|&i| FieldPrime::from(i)).collect()).unwrap();
-		let res: Vec<FieldPrime> = vec![1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1].iter().map(|&i| FieldPrime::from(i)).collect();
+		let res: Vec<FieldPrime> = vec![1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0].iter().map(|&i| FieldPrime::from(i)).collect();
 		assert_eq!(r, &res[..]);
 	}
 
@@ -187,7 +225,16 @@ mod tests {
 		let f2u = RustHelper::FieldToU32;
 		let inputs = vec![4294967294u32];
 		let r = f2u.execute(&inputs.iter().map(|&i| FieldPrime::from(i)).collect()).unwrap();
-		let res: Vec<FieldPrime> = vec![1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0].iter().map(|&i| FieldPrime::from(i)).collect();
+		let res: Vec<FieldPrime> = vec![1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0].iter().map(|&i| FieldPrime::from(i)).collect();
+		assert_eq!(r, &res[..]);
+	}
+
+	#[test]
+	fn execute_u32_to_field() {
+		let u2f = RustHelper::U32ToField;
+		let inputs = vec![0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0];
+		let r = u2f.execute(&inputs.iter().map(|&i| FieldPrime::from(i)).collect()).unwrap();
+		let res: Vec<FieldPrime> = vec![2].iter().map(|&i| FieldPrime::from(i)).collect();
 		assert_eq!(r, &res[..]);
 	}
 }

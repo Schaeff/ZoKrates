@@ -16,10 +16,12 @@ use optimizer::{Optimizer};
 use flatten::Flattener;
 use std::io::{self};
 
+#[cfg(not(feature = "nolibsnark"))]
 use libsnark::{get_sha256_constraints};
+
 use serde_json;
 use standard;
-use u32_utils::FieldToU32;
+use u32_utils::{field_to_u32, u32_to_field};
 
 #[derive(Debug)]
 pub enum CompileError<T: Field> {
@@ -90,14 +92,18 @@ fn compile_aux<T: Field>(path: PathBuf, should_include_gadgets: bool) -> Result<
     	compiled_imports.push((compiled, import.alias()));
     }
 
-    if should_include_gadgets {
-    	// inject globals
-	    let r1cs: standard::R1CS = serde_json::from_str(&get_sha256_constraints()).unwrap();
-
-	    compiled_imports.push((FlatProg::from(r1cs), "sha256libsnark".to_string()));
+    #[cfg(not(feature = "nolibsnark"))]
+    {
+	    if should_include_gadgets {
+	    	// inject globals
+		    let r1cs: standard::R1CS = serde_json::from_str(&get_sha256_constraints()).unwrap();
+	    	compiled_imports.push((FlatProg::from(r1cs), "sha256libsnark".to_string()));
+		}
     }
 
-    compiled_imports.push((FieldToU32(), "fieldToU32".to_string()));
+    compiled_imports.push((field_to_u32(), "fieldToU32".to_string()));
+    compiled_imports.push((u32_to_field(), "u32ToField".to_string()));
+
     	
     let program_ast = Importer::new().apply_imports(compiled_imports, program_ast_without_imports);
 

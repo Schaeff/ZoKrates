@@ -4,7 +4,7 @@ use parameter::Parameter;
 
 use helpers::{DirectiveStatement, Helper, RustHelper};
 
-pub fn FieldToU32<T: Field>() -> FlatProg<T> {
+pub fn field_to_u32<T: Field>() -> FlatProg<T> {
 
 	// GENERIC
 
@@ -13,13 +13,13 @@ pub fn FieldToU32<T: Field>() -> FlatProg<T> {
 		inputs.push(format!("i{}", i));
 	}
 
-	let arguments = inputs.iter().map(|i| Parameter {
+	let arguments = inputs.iter().map(|id| Parameter {
 		private: true,
-		id: format!("i{}", i)
+		id: id.to_owned()
 	}).collect();
 
 	let mut outputs = vec![];
-	for i in 0..32 {
+	for i in 0..33 {
 		outputs.push(format!("o{}", i));
 	}
 
@@ -31,10 +31,18 @@ pub fn FieldToU32<T: Field>() -> FlatProg<T> {
 			box decomp, 
 			box FlatExpression::Mult(
 				box FlatExpression::Identifier(format!("o{}", i)),
-				box FlatExpression::Number(T::from(2).pow(i))
+				box FlatExpression::Number(T::from(2).pow(31 - i))
 			)
 		)
 	}
+
+	decomp = FlatExpression::Add(
+		box decomp, 
+		box FlatExpression::Mult(
+			box FlatExpression::Number(T::from(2).pow(32)),
+			box FlatExpression::Identifier(format!("o32"))
+		)
+	);
 
 	// GENERIC
 	FlatProg {
@@ -60,41 +68,56 @@ pub fn FieldToU32<T: Field>() -> FlatProg<T> {
 	}
 }
 
-// #[cfg(test)]
-// mod u32 {
-// 	// use super::*;
-// 	// use field::FieldPrime;
+pub fn u32_to_field<T: Field>() -> FlatProg<T> {
 
-// 	// #[test]
-// 	// fn signature() {
+	// GENERIC
 
+	let mut inputs = vec![];
+	for i in 0..32 {
+		inputs.push(format!("i{}", i));
+	}
 
+	let arguments = inputs.iter().map(|id| Parameter {
+		private: true,
+		id: id.to_owned()
+	}).collect();
 
-// 	// 	let helper = RustHelper {
-// 	// 		id: "fieldToU32".to_owned(),
-// 	// 		output_count: 32,
-// 	// 		input_count: 1,
+	let mut outputs = vec![];
+	for i in 0..1 {
+		outputs.push(format!("o{}", i));
+	}
 
-// 	// 	};
+	let mut decomp = FlatExpression::Number(T::zero());
+	for i in 0..32 {
+		decomp = FlatExpression::Add(
+			box decomp, 
+			box FlatExpression::Mult(
+				box FlatExpression::Identifier(format!("i{}", i)),
+				box FlatExpression::Number(T::from(2).pow(31 - i))
+			)
+		)
+	}
 
-// 	// 	let fun: FlatFunction<FieldPrime> = helper.clone().into();
-
-// 	// 	assert_eq!(fun.arguments.len(), helper.input_count);
-// 	// 	assert_eq!(fun.return_count, helper.output_count);
-// 	// }
-
-// 	// #[test]
-// 	// fn body() {
-// 	// 	let helper = RustHelper {
-// 	// 		id: "fieldToU32".to_owned(),
-// 	// 		output_count: 32,
-// 	// 		input_count: 1,
-// 	// 	};
-
-// 	// 	let fun: FlatFunction<FieldPrime> = helper.clone().into();
-
-// 	// 	println!("{}", fun);
-
-// 	// 	assert_eq!(fun.statements.len(), 3);
-// 	// }
-// }
+	// GENERIC
+	FlatProg {
+		functions: vec![FlatFunction {
+			id: "main".to_string(),
+			arguments: arguments,
+			statements: vec![
+				FlatStatement::Directive(
+					DirectiveStatement {
+						outputs: outputs.clone(),
+						inputs: inputs,
+						helper: Helper::Rust(RustHelper::U32ToField)
+					}
+				),
+				FlatStatement::Condition(decomp, FlatExpression::Identifier("o0".to_owned())),
+				FlatStatement::Return(FlatExpressionList {
+					expressions: outputs.iter()
+	     				.map(|o| FlatExpression::Identifier(o.to_owned())).collect()
+				})
+			],
+			return_count: 1
+		}]
+	}
+}
