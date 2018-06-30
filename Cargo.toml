@@ -1,5 +1,6 @@
 [workspace]
 members = [
     "zokrates",
-    "zokrates-cli"
+    "zokrates-cli",
+    "zokrates-wasm-wrapper"
 ]

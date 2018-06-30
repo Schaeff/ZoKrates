@@ -1,0 +1,15 @@
+[package]
+name = "zokrates-wasm-wrapper"
+version = "0.1.0"
+authors = ["Thibaut Schaeffer <thibaut@schaeff.fr>"]
+repository = "https://github.com/JacobEberhardt/ZoKrates.git"
+
+[features]
+default = []
+
+[dependencies]
+zokrates = { version = "0.1", path = "../zokrates" }
+wasm-bindgen = "0.2"
+
+[lib]
+crate-type = ["cdylib"]
