@@ -387,7 +387,7 @@ impl Flattener {
                         self.function_calls.insert(funct.id.clone(),1);
                     }
                 }
-                let prefix = format!("{}_i{}o{}_{}_", funct.id.clone(), funct.arguments.len(), funct.return_count, self.function_calls.get(&funct.id).unwrap());
+                let prefix = format!("{}_i{}o{}_{}_", funct.id, funct.arguments.len(), funct.return_count, self.function_calls.get(&funct.id).unwrap());
 
                 // Handle complex parameters and assign values:
                 // Rename Parameters, assign them to values in call. Resolve complex expressions with definitions
@@ -401,7 +401,7 @@ impl Flattener {
                                 FieldElementExpression::Identifier(id) => {
                                     new_var = format!("{}param_{}", &prefix, id);
                                     statements_flattened
-                                        .push(FlatStatement::Definition(new_var.clone(), FlatExpression::Identifier(id.clone().to_string())));
+                                        .push(FlatStatement::Definition(new_var.clone(), FlatExpression::Identifier(id)));
                                 },
                                 _ => {
                                     // for field elements, flatten the input and assign it to a new variable
@@ -423,13 +423,13 @@ impl Flattener {
                                 BooleanExpression::Identifier(id) => {
                                     new_var = format!("{}param_{}", &prefix, id);
                                     statements_flattened
-                                        .push(FlatStatement::Definition(new_var.clone(), FlatExpression::Identifier(id.clone().to_string())));
+                                        .push(FlatStatement::Definition(new_var.clone(), FlatExpression::Identifier(id)));
                                 },
                                 _ => panic!("A boolean argument to a function has to be a identifier")
                             }
                         }
                     }
-                    replacement_map.insert(funct.arguments.get(i).unwrap().id.clone(), new_var);
+                    replacement_map.insert(funct.arguments[i].id.clone(), new_var);
                 }
 
                 // Ensure Renaming and correct returns:
@@ -443,7 +443,7 @@ impl Flattener {
                             }
                         },
                         FlatStatement::Definition(var, rhs) => {
-                            let new_var: String = format!("{}{}", prefix, var.clone());
+                            let new_var = format!("{}{}", prefix, var);
                             replacement_map.insert(var, new_var.clone());
                             let new_rhs = rhs.apply_substitution(&replacement_map);
                             statements_flattened.push(
@@ -457,9 +457,9 @@ impl Flattener {
                                 .push(FlatStatement::Condition(new_lhs, new_rhs));
                         },
                         FlatStatement::Directive(d) => {
-                            let new_outputs = d.outputs.iter().map(|o| {
-                                let new_o: String = format!("{}{}", prefix, o.clone());
-                                replacement_map.insert(o.to_string(), new_o.clone());
+                            let new_outputs = d.outputs.into_iter().map(|o| {
+                                let new_o = format!("{}{}", prefix, o);
+                                replacement_map.insert(o, new_o.clone());
                                 new_o
                             }).collect();
                             let new_inputs = d.inputs.iter().map(|i| replacement_map.get(i).unwrap()).collect();
@@ -468,7 +468,7 @@ impl Flattener {
                                     DirectiveStatement {
                                         outputs: new_outputs,
                                         inputs: new_inputs,
-                                        helper: d.helper.clone()
+                                        helper: d.helper
                                     }
                                 )
                             )
@@ -756,7 +756,7 @@ impl Flattener {
                         // handle return of function call
                         let var_to_replace = self.get_latest_var_substitution(&v.id);
                         if !(var == var_to_replace) && self.variables.contains(&var_to_replace) && !self.substitution.contains_key(&var_to_replace){
-                            self.substitution.insert(var_to_replace.clone().to_string(),var.clone());
+                            self.substitution.insert(var_to_replace,var.clone());
                         }
 
                         statements_flattened.push(FlatStatement::Definition(var, rhs));
@@ -858,7 +858,7 @@ impl Flattener {
                                     // handle return of function call
                                     let var_to_replace = self.get_latest_var_substitution(&v.id);
                                     if !(var == var_to_replace) && self.variables.contains(&var_to_replace) && !self.substitution.contains_key(&var_to_replace){
-                                        self.substitution.insert(var_to_replace.clone().to_string(),var.clone());
+                                        self.substitution.insert(var_to_replace, var.clone());
                                     }
                                     statements_flattened.push(FlatStatement::Definition(var, rhs_flattened.expressions[i].clone()));
                                 },
@@ -920,7 +920,7 @@ impl Flattener {
         let return_count = funct.signature.outputs.iter().map(|output_type| output_type.get_primitive_count()).fold(0, |acc, x| acc + x);
 
         FlatFunction {
-            id: funct.id.clone(),
+            id: funct.id,
             arguments: arguments_flattened,
             statements: statements_flattened,
             return_count: return_count

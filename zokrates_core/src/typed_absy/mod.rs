@@ -338,7 +338,7 @@ impl<T: Field> FieldElementExpression<T> {
                 let mut new_name = id.clone();
                 loop {
                     match substitution.get(&new_name) {
-                        Some(x) => new_name = x.to_string(),
+                        Some(x) => new_name = x,
                         None => return FieldElementExpression::Identifier(new_name),
                     }
                 }
