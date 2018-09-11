@@ -396,7 +396,7 @@ pub fn next_token<T: Field>(input: &String, pos: &Position) -> (Token<T>, String
 mod tests {
 
     use super::*;
-    use field::FieldPrime;
+    use field::PrimeField;
 
     #[test]
     fn inline_comment() {
@@ -404,7 +404,7 @@ mod tests {
             line: 100,
             col: 258,
         };
-        let (token, _, _) = next_token::<FieldPrime>(&" //inline comment".to_string(), &pos);
+        let (token, _, _) = next_token::<PrimeField>(&" //inline comment".to_string(), &pos);
         assert_eq!(Token::InlineComment("inline comment".to_string()), token);
     }
 
@@ -416,7 +416,7 @@ mod tests {
             let pos = Position { line: 45, col: 121 };
             assert_eq!(
                 (
-                    Token::Num(FieldPrime::from(12234)),
+                    Token::Num(PrimeField::from(12234)),
                     String::from(""),
                     pos.col(5)
                 ),
@@ -429,7 +429,7 @@ mod tests {
             let pos = Position { line: 45, col: 121 };
             assert_eq!(
                 (
-                    Token::Num(FieldPrime::from(354)),
+                    Token::Num(PrimeField::from(354)),
                     String::from("+879"),
                     pos.col(3)
                 ),
@@ -442,7 +442,7 @@ mod tests {
             let pos = Position { line: 45, col: 121 };
             assert_eq!(
                 (
-                    Token::Num(FieldPrime::from(354)),
+                    Token::Num(PrimeField::from(354)),
                     String::from(" "),
                     pos.col(3)
                 ),
@@ -454,14 +454,14 @@ mod tests {
         #[should_panic]
         fn space_before() {
             let pos = Position { line: 45, col: 121 };
-            parse_num::<FieldPrime>(&" 354".to_string(), &pos);
+            parse_num::<PrimeField>(&" 354".to_string(), &pos);
         }
 
         #[test]
         #[should_panic]
         fn x_before() {
             let pos = Position { line: 45, col: 121 };
-            parse_num::<FieldPrime>(&"x324312".to_string(), &pos);
+            parse_num::<PrimeField>(&"x324312".to_string(), &pos);
         }
     }
 }

@@ -36,7 +36,7 @@ fn parse_comma_separated_expression_list_rec<T: Field>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use field::FieldPrime;
+    use field::PrimeField;
     use absy::Expression;
 
     fn parse_comma_separated_list<T: Field>(
@@ -51,7 +51,7 @@ mod tests {
     fn comma_separated_list() {
         let pos = Position { line: 45, col: 121 };
         let string = String::from("b, c");
-        let expr = ExpressionList::<FieldPrime> {
+        let expr = ExpressionList::<PrimeField> {
             expressions: vec![Expression::Identifier(String::from("b")),Expression::Identifier(String::from("c"))]
         };
         assert_eq!(
@@ -69,7 +69,7 @@ mod tests {
         };
         assert_eq!(
             Ok((exprs, String::from(""), pos.col(string.len() as isize))),
-            parse_comma_separated_list::<FieldPrime>(string, pos)
+            parse_comma_separated_list::<PrimeField>(string, pos)
         )
     }
 
@@ -86,7 +86,7 @@ mod tests {
         };
         assert_eq!(
             Ok((exprs, String::from(""), pos.col(string.len() as isize))),
-            parse_comma_separated_list::<FieldPrime>(string, pos)
+            parse_comma_separated_list::<PrimeField>(string, pos)
         )
     }
 }

@@ -344,7 +344,7 @@ pub fn r1cs_program<T: Field>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use field::FieldPrime;
+    use field::PrimeField;
     use std::cmp::Ordering;
 
     /// Sort function for tuples `(x, y)` which sorts based on `x` first.
@@ -367,26 +367,26 @@ mod tests {
             let lhs = Identifier(String::from("x"));
             let rhs = Add(
                 box Identifier(String::from("y")),
-                box Number(FieldPrime::from(5)),
+                box Number(PrimeField::from(5)),
             );
             let mut variables: Vec<String> = vec!["~one", "x", "y"]
                 .iter()
                 .map(|&x| String::from(x))
                 .collect();
-            let mut a_row: Vec<(usize, FieldPrime)> = Vec::new();
-            let mut b_row: Vec<(usize, FieldPrime)> = Vec::new();
-            let mut c_row: Vec<(usize, FieldPrime)> = Vec::new();
+            let mut a_row: Vec<(usize, PrimeField)> = Vec::new();
+            let mut b_row: Vec<(usize, PrimeField)> = Vec::new();
+            let mut c_row: Vec<(usize, PrimeField)> = Vec::new();
 
             r1cs_expression(lhs, rhs, &mut variables, &mut a_row, &mut b_row, &mut c_row);
             a_row.sort_by(sort_tup);
             b_row.sort_by(sort_tup);
             c_row.sort_by(sort_tup);
             assert_eq!(
-                vec![(0, FieldPrime::from(5)), (2, FieldPrime::from(1))],
+                vec![(0, PrimeField::from(5)), (2, PrimeField::from(1))],
                 a_row
             );
-            assert_eq!(vec![(0, FieldPrime::from(1))], b_row);
-            assert_eq!(vec![(1, FieldPrime::from(1))], c_row);
+            assert_eq!(vec![(0, PrimeField::from(1))], b_row);
+            assert_eq!(vec![(1, PrimeField::from(1))], c_row);
         }
 
         #[test]
@@ -403,7 +403,7 @@ mod tests {
                     box Add(
                         box Identifier(String::from("z")),
                         box Mult(
-                            box Number(FieldPrime::from(3)),
+                            box Number(PrimeField::from(3)),
                             box Identifier(String::from("x")),
                         ),
                     ),
@@ -418,21 +418,21 @@ mod tests {
                 box Add(
                     box Sub(
                         box Mult(
-                            box Number(FieldPrime::from(2)),
+                            box Number(PrimeField::from(2)),
                             box Identifier(String::from("x")),
                         ),
                         box Mult(
-                            box Number(FieldPrime::from(4)),
+                            box Number(PrimeField::from(4)),
                             box Identifier(String::from("y")),
                         ),
                     ),
                     box Sub(
                         box Mult(
-                            box Number(FieldPrime::from(4)),
+                            box Number(PrimeField::from(4)),
                             box Identifier(String::from("y")),
                         ),
                         box Mult(
-                            box Number(FieldPrime::from(2)),
+                            box Number(PrimeField::from(2)),
                             box Identifier(String::from("z")),
                         ),
                     ),
@@ -442,9 +442,9 @@ mod tests {
                 .iter()
                 .map(|&x| String::from(x))
                 .collect();
-            let mut a_row: Vec<(usize, FieldPrime)> = Vec::new();
-            let mut b_row: Vec<(usize, FieldPrime)> = Vec::new();
-            let mut c_row: Vec<(usize, FieldPrime)> = Vec::new();
+            let mut a_row: Vec<(usize, PrimeField)> = Vec::new();
+            let mut b_row: Vec<(usize, PrimeField)> = Vec::new();
+            let mut c_row: Vec<(usize, PrimeField)> = Vec::new();
 
             r1cs_expression(lhs, rhs, &mut variables, &mut a_row, &mut b_row, &mut c_row);
             a_row.sort_by(sort_tup);
@@ -452,18 +452,18 @@ mod tests {
             c_row.sort_by(sort_tup);
             assert_eq!(
                 vec![
-                    (1, FieldPrime::from(6)),
-                    (2, FieldPrime::from(4)),
-                    (3, FieldPrime::from(1)),
+                    (1, PrimeField::from(6)),
+                    (2, PrimeField::from(4)),
+                    (3, PrimeField::from(1)),
                 ],
                 a_row
             );
-            assert_eq!(vec![(0, FieldPrime::from(1))], b_row);
+            assert_eq!(vec![(0, PrimeField::from(1))], b_row);
             assert_eq!(
                 vec![
-                    (1, FieldPrime::from(1)),
-                    (2, FieldPrime::from(7)),
-                    (3, FieldPrime::from(2)),
+                    (1, PrimeField::from(1)),
+                    (2, PrimeField::from(7)),
+                    (3, PrimeField::from(2)),
                 ],
                 c_row
             );
@@ -474,40 +474,40 @@ mod tests {
             // 7 * x + y == 3 * y - z * 6
             let lhs = Add(
                 box Mult(
-                    box Number(FieldPrime::from(7)),
+                    box Number(PrimeField::from(7)),
                     box Identifier(String::from("x")),
                 ),
                 box Identifier(String::from("y")),
             );
             let rhs = Sub(
                 box Mult(
-                    box Number(FieldPrime::from(3)),
+                    box Number(PrimeField::from(3)),
                     box Identifier(String::from("y")),
                 ),
                 box Mult(
                     box Identifier(String::from("z")),
-                    box Number(FieldPrime::from(6)),
+                    box Number(PrimeField::from(6)),
                 ),
             );
             let mut variables: Vec<String> = vec!["~one", "x", "y", "z"]
                 .iter()
                 .map(|&x| String::from(x))
                 .collect();
-            let mut a_row: Vec<(usize, FieldPrime)> = Vec::new();
-            let mut b_row: Vec<(usize, FieldPrime)> = Vec::new();
-            let mut c_row: Vec<(usize, FieldPrime)> = Vec::new();
+            let mut a_row: Vec<(usize, PrimeField)> = Vec::new();
+            let mut b_row: Vec<(usize, PrimeField)> = Vec::new();
+            let mut c_row: Vec<(usize, PrimeField)> = Vec::new();
 
             r1cs_expression(lhs, rhs, &mut variables, &mut a_row, &mut b_row, &mut c_row);
             a_row.sort_by(sort_tup);
             b_row.sort_by(sort_tup);
             c_row.sort_by(sort_tup);
-            assert_eq!(vec![(2, FieldPrime::from(3))], a_row); // 3 * y
-            assert_eq!(vec![(0, FieldPrime::from(1))], b_row); // 1
+            assert_eq!(vec![(2, PrimeField::from(3))], a_row); // 3 * y
+            assert_eq!(vec![(0, PrimeField::from(1))], b_row); // 1
             assert_eq!(
                 vec![
-                    (1, FieldPrime::from(7)),
-                    (2, FieldPrime::from(1)),
-                    (3, FieldPrime::from(6)),
+                    (1, PrimeField::from(7)),
+                    (2, PrimeField::from(1)),
+                    (3, PrimeField::from(6)),
                 ],
                 c_row
             ); // (7 * x + y) + z * 6
@@ -520,17 +520,17 @@ mod tests {
             let lhs = Sub(
                 box Sub(
                     box Mult(
-                        box Number(FieldPrime::from(3)),
+                        box Number(PrimeField::from(3)),
                         box Identifier(String::from("y")),
                     ),
                     box Mult(
                         box Identifier(String::from("z")),
-                        box Number(FieldPrime::from(2)),
+                        box Number(PrimeField::from(2)),
                     ),
                 ),
                 box Mult(
                     box Identifier(String::from("x")),
-                    box Number(FieldPrime::from(12)),
+                    box Number(PrimeField::from(12)),
                 ),
             );
             let rhs = Sub(
@@ -541,9 +541,9 @@ mod tests {
                 .iter()
                 .map(|&x| String::from(x))
                 .collect();
-            let mut a_row: Vec<(usize, FieldPrime)> = Vec::new();
-            let mut b_row: Vec<(usize, FieldPrime)> = Vec::new();
-            let mut c_row: Vec<(usize, FieldPrime)> = Vec::new();
+            let mut a_row: Vec<(usize, PrimeField)> = Vec::new();
+            let mut b_row: Vec<(usize, PrimeField)> = Vec::new();
+            let mut c_row: Vec<(usize, PrimeField)> = Vec::new();
 
             r1cs_expression(lhs, rhs, &mut variables, &mut a_row, &mut b_row, &mut c_row);
             a_row.sort_by(sort_tup);
@@ -551,15 +551,15 @@ mod tests {
             c_row.sort_by(sort_tup);
             assert_eq!(
                 vec![
-                    (1, FieldPrime::from(12)),
-                    (3, FieldPrime::from(2)),
-                    (4, FieldPrime::from(1)),
+                    (1, PrimeField::from(12)),
+                    (3, PrimeField::from(2)),
+                    (4, PrimeField::from(1)),
                 ],
                 a_row
             ); // a + 12*x + 2*z
-            assert_eq!(vec![(0, FieldPrime::from(1))], b_row); // 1
+            assert_eq!(vec![(0, PrimeField::from(1))], b_row); // 1
             assert_eq!(
-                vec![(1, FieldPrime::from(1)), (2, FieldPrime::from(3))],
+                vec![(1, PrimeField::from(1)), (2, PrimeField::from(3))],
                 c_row
             ); // 3*y + x
         }
@@ -570,16 +570,16 @@ mod tests {
             let lhs = Add(
                 box Add(
                     box Mult(
-                        box Number(FieldPrime::from(4)),
+                        box Number(PrimeField::from(4)),
                         box Identifier(String::from("b")),
                     ),
                     box Mult(
-                        box Number(FieldPrime::from(3)),
+                        box Number(PrimeField::from(3)),
                         box Identifier(String::from("a")),
                     ),
                 ),
                 box Mult(
-                    box Number(FieldPrime::from(3)),
+                    box Number(PrimeField::from(3)),
                     box Identifier(String::from("c")),
                 ),
             );
@@ -587,26 +587,26 @@ mod tests {
                 box Add(
                     box Add(
                         box Mult(
-                            box Number(FieldPrime::from(3)),
+                            box Number(PrimeField::from(3)),
                             box Identifier(String::from("a")),
                         ),
                         box Mult(
-                            box Number(FieldPrime::from(6)),
+                            box Number(PrimeField::from(6)),
                             box Identifier(String::from("b")),
                         ),
                     ),
                     box Mult(
-                        box Number(FieldPrime::from(4)),
+                        box Number(PrimeField::from(4)),
                         box Identifier(String::from("c")),
                     ),
                 ),
                 box Add(
                     box Mult(
-                        box Number(FieldPrime::from(31)),
+                        box Number(PrimeField::from(31)),
                         box Identifier(String::from("a")),
                     ),
                     box Mult(
-                        box Number(FieldPrime::from(4)),
+                        box Number(PrimeField::from(4)),
                         box Identifier(String::from("c")),
                     ),
                 ),
@@ -615,9 +615,9 @@ mod tests {
                 .iter()
                 .map(|&x| String::from(x))
                 .collect();
-            let mut a_row: Vec<(usize, FieldPrime)> = Vec::new();
-            let mut b_row: Vec<(usize, FieldPrime)> = Vec::new();
-            let mut c_row: Vec<(usize, FieldPrime)> = Vec::new();
+            let mut a_row: Vec<(usize, PrimeField)> = Vec::new();
+            let mut b_row: Vec<(usize, PrimeField)> = Vec::new();
+            let mut c_row: Vec<(usize, PrimeField)> = Vec::new();
 
             r1cs_expression(lhs, rhs, &mut variables, &mut a_row, &mut b_row, &mut c_row);
             a_row.sort_by(sort_tup);
@@ -625,21 +625,21 @@ mod tests {
             c_row.sort_by(sort_tup);
             assert_eq!(
                 vec![
-                    (1, FieldPrime::from(3)),
-                    (2, FieldPrime::from(6)),
-                    (3, FieldPrime::from(4)),
+                    (1, PrimeField::from(3)),
+                    (2, PrimeField::from(6)),
+                    (3, PrimeField::from(4)),
                 ],
                 a_row
             );
             assert_eq!(
-                vec![(1, FieldPrime::from(31)), (3, FieldPrime::from(4))],
+                vec![(1, PrimeField::from(31)), (3, PrimeField::from(4))],
                 b_row
             );
             assert_eq!(
                 vec![
-                    (1, FieldPrime::from(3)),
-                    (2, FieldPrime::from(4)),
-                    (3, FieldPrime::from(3)),
+                    (1, PrimeField::from(3)),
+                    (2, PrimeField::from(4)),
+                    (3, PrimeField::from(3)),
                 ],
                 c_row
             );
@@ -651,29 +651,29 @@ mod tests {
             let lhs = Identifier(String::from("x"));
             let rhs = Div(
                 box Mult(
-                    box Number(FieldPrime::from(3)),
+                    box Number(PrimeField::from(3)),
                     box Identifier(String::from("x")),
                 ),
                 box Mult(
                     box Identifier(String::from("y")),
-                    box Number(FieldPrime::from(6)),
+                    box Number(PrimeField::from(6)),
                 ),
             );
             let mut variables: Vec<String> = vec!["~one", "x", "y"]
                 .iter()
                 .map(|&x| String::from(x))
                 .collect();
-            let mut a_row: Vec<(usize, FieldPrime)> = Vec::new();
-            let mut b_row: Vec<(usize, FieldPrime)> = Vec::new();
-            let mut c_row: Vec<(usize, FieldPrime)> = Vec::new();
+            let mut a_row: Vec<(usize, PrimeField)> = Vec::new();
+            let mut b_row: Vec<(usize, PrimeField)> = Vec::new();
+            let mut c_row: Vec<(usize, PrimeField)> = Vec::new();
 
             r1cs_expression(lhs, rhs, &mut variables, &mut a_row, &mut b_row, &mut c_row);
             a_row.sort_by(sort_tup);
             b_row.sort_by(sort_tup);
             c_row.sort_by(sort_tup);
-            assert_eq!(vec![(1, FieldPrime::from(1))], a_row); // x
-            assert_eq!(vec![(2, FieldPrime::from(6))], b_row); // y * 6
-            assert_eq!(vec![(1, FieldPrime::from(3))], c_row); // 3 * x
+            assert_eq!(vec![(1, PrimeField::from(1))], a_row); // x
+            assert_eq!(vec![(2, PrimeField::from(6))], b_row); // y * 6
+            assert_eq!(vec![(1, PrimeField::from(3))], c_row); // 3 * x
         }
     }
 }

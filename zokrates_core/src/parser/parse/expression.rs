@@ -293,13 +293,13 @@ pub fn parse_expr<T: Field>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use field::FieldPrime;
+    use field::PrimeField;
 
     #[test]
     fn parse_if_then_else_ok() {
         let pos = Position { line: 45, col: 121 };
         let string = String::from("if a < b then c else d fi");
-        let expr = Expression::IfElse::<FieldPrime>(
+        let expr = Expression::IfElse::<PrimeField>(
             box Condition::Lt(
                 Expression::Identifier(String::from("a")),
                 Expression::Identifier(String::from("b")),
@@ -319,7 +319,7 @@ mod tests {
         fn if_then_else() {
             let pos = Position { line: 45, col: 121 };
             let string = String::from("if a < b then c else d fi");
-            let expr = Expression::IfElse::<FieldPrime>(
+            let expr = Expression::IfElse::<PrimeField>(
                 box Condition::Lt(
                     Expression::Identifier(String::from("a")),
                     Expression::Identifier(String::from("b")),
@@ -337,10 +337,10 @@ mod tests {
             let pos = Position { line: 45, col: 121 };
             let string = String::from("(5 + a * 6)");
             let expr = Expression::Add(
-                box Expression::Number(FieldPrime::from(5)),
+                box Expression::Number(PrimeField::from(5)),
                 box Expression::Mult(
                     box Expression::Identifier(String::from("a")),
-                    box Expression::Number(FieldPrime::from(6)),
+                    box Expression::Number(PrimeField::from(6)),
                 ),
             );
             assert_eq!(
@@ -352,7 +352,7 @@ mod tests {
         fn ide() {
             let pos = Position { line: 45, col: 121 };
             let string = String::from("a");
-            let expr = Expression::Identifier::<FieldPrime>(String::from("a"));
+            let expr = Expression::Identifier::<PrimeField>(String::from("a"));
             assert_eq!(
                 Ok((expr, String::from(""), pos.col(string.len() as isize))),
                 parse_factor(&string, &pos)
@@ -362,7 +362,7 @@ mod tests {
         fn num() {
             let pos = Position { line: 45, col: 121 };
             let string = String::from("234");
-            let expr = Expression::Number(FieldPrime::from(234));
+            let expr = Expression::Number(PrimeField::from(234));
             assert_eq!(
                 Ok((expr, String::from(""), pos.col(string.len() as isize))),
                 parse_factor(&string, &pos)

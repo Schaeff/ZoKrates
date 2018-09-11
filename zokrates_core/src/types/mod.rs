@@ -5,6 +5,7 @@ pub use types::signature::Signature;
 
 mod signature;
 pub mod conversions;
+pub mod conversions_bellman;
 mod constraints;
 
 #[derive(Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]

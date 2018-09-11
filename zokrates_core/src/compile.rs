@@ -130,7 +130,7 @@ fn compile_aux<T: Field, R: BufRead, S: BufRead, E: Into<imports::Error>>(reader
 #[cfg(test)]
 mod test {
 	use super::*;
-	use field::FieldPrime;
+	use field::PrimeField;
 	use std::io::{BufReader, Empty};
 
 	#[test]
@@ -140,7 +140,7 @@ mod test {
 			def main():
 			   return foo()
 		"#.as_bytes());
-		let res: Result<FlatProg<FieldPrime>, CompileError<FieldPrime>> = compile(&mut r, PathBuf::from("./path/to/file"), None::<fn(&PathBuf) -> Result<BufReader<Empty>, io::Error>>, false, false);
+		let res: Result<FlatProg<PrimeField>, CompileError<PrimeField>> = compile(&mut r, PathBuf::from("./path/to/file"), None::<fn(&PathBuf) -> Result<BufReader<Empty>, io::Error>>, false, false);
 		assert_eq!(format!("{}", res.unwrap_err()), "Import error: Can't resolve import without a resolver".to_string()); 
 	}
 
@@ -150,7 +150,7 @@ mod test {
 			def main():
 			   return 1
 		"#.as_bytes());
-		let res: Result<FlatProg<FieldPrime>, CompileError<FieldPrime>> = compile(&mut r, PathBuf::from("./path/to/file"), None::<fn(&PathBuf) -> Result<BufReader<Empty>, io::Error>>, false, false);
+		let res: Result<FlatProg<PrimeField>, CompileError<PrimeField>> = compile(&mut r, PathBuf::from("./path/to/file"), None::<fn(&PathBuf) -> Result<BufReader<Empty>, io::Error>>, false, false);
 		assert!(res.is_ok()); 
 	}
 }

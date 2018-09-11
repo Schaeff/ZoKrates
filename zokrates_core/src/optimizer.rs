@@ -121,12 +121,12 @@ impl Optimizer {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use field::FieldPrime;
+	use field::PrimeField;
 	use flat_absy::flat_parameter::FlatParameter;
 
 	#[test]
 	fn remove_synonyms() {
-		let f: FlatFunction<FieldPrime> = FlatFunction {
+		let f: FlatFunction<PrimeField> = FlatFunction {
             id: "foo".to_string(),
             arguments: vec![FlatParameter {id: "a".to_string(), private: false}],
             statements: vec![
@@ -139,7 +139,7 @@ mod tests {
             return_count: 1
         };
 
-        let optimized: FlatFunction<FieldPrime> = FlatFunction {
+        let optimized: FlatFunction<PrimeField> = FlatFunction {
             id: "foo".to_string(),
         	arguments: vec![FlatParameter {id: "_0".to_string(), private: false}],
         	statements: vec![
@@ -157,12 +157,12 @@ mod tests {
 
 	#[test]
 	fn remove_multiple_synonyms() {
-		let f: FlatFunction<FieldPrime> = FlatFunction {
+		let f: FlatFunction<PrimeField> = FlatFunction {
             id: "foo".to_string(),
             arguments: vec![FlatParameter {id: "a".to_string(), private: false}],
             statements: vec![
             	FlatStatement::Definition("b".to_string(), FlatExpression::Identifier("a".to_string())),
-            	FlatStatement::Definition("d".to_string(), FlatExpression::Number(FieldPrime::from(1))),
+            	FlatStatement::Definition("d".to_string(), FlatExpression::Number(PrimeField::from(1))),
             	FlatStatement::Definition("c".to_string(), FlatExpression::Identifier("b".to_string())),
             	FlatStatement::Definition("e".to_string(), FlatExpression::Identifier("d".to_string())),
             	FlatStatement::Return(FlatExpressionList {
@@ -172,11 +172,11 @@ mod tests {
             return_count: 2
         };
 
-        let optimized: FlatFunction<FieldPrime> = FlatFunction {
+        let optimized: FlatFunction<PrimeField> = FlatFunction {
             id: "foo".to_string(),
         	arguments: vec![FlatParameter {id: "_0".to_string(), private: false}],
         	statements: vec![
-            	FlatStatement::Definition("_1".to_string(), FlatExpression::Number(FieldPrime::from(1))),
+            	FlatStatement::Definition("_1".to_string(), FlatExpression::Number(PrimeField::from(1))),
         		FlatStatement::Return(FlatExpressionList {
             		expressions: vec![FlatExpression::Identifier("_0".to_string()), FlatExpression::Identifier("_1".to_string())]
             	})

@@ -7,20 +7,28 @@
 
 const BINARY_SEPARATOR: &str = "_b";
 
-
+use pairing::Engine;
+use bellman_absy::LinCombMemory;
+use bellman_absy::number_to_fr;
+use field::Bls12Field;
+use pairing::bls12_381::Bls12;
+use bellman_absy::Program;
+use types::Signature;
+use types::conversions_bellman::cast;
+use absy::variable::Variable;
 use std::collections::{HashSet, HashMap};
 use typed_absy::*;
-use field::Field;
-use flat_absy::*;
-use flat_absy::flat_parameter::FlatParameter;
+use field::*;
+use flat_absy_bellman::*;
+use flat_absy_bellman::flat_parameter::FlatParameter;
 use substitution::direct_substitution::DirectSubstitution;
 use substitution::Substitution;
-use helpers::{DirectiveStatement, Helper, RustHelper};
+use helpers::{BellmanDirectiveStatement, BellmanHelper, RustHelper, RankOneHelper};
 use types::Type;
-use types::Signature;
-use types::conversions::cast;
-use absy::variable::Variable;
 use absy::parameter::Parameter;
+
+use num::{One, Zero};
+
 
 /// Flattener, computes flattened program.
 pub struct Flattener {
@@ -52,9 +60,9 @@ impl Flattener {
     }
 
     /// Loads the standard library
-    fn load_stdlib<T: Field>(
+    fn load_stdlib(
         &mut self,
-        functions_flattened: &mut Vec<FlatFunction<T>>,
+        functions_flattened: &mut Vec<FlatFunction>,
     ) -> () {
 
         // Load type casting functions
@@ -105,7 +113,7 @@ impl Flattener {
                             ),
                             box FieldElementExpression::Mult(
                                 box FieldElementExpression::Sub(
-                                    box FieldElementExpression::Number(T::one()),
+                                    box FieldElementExpression::Number(Bls12Field::one()),
                                     box FieldElementExpression::Identifier("condition_as_field".to_string())
                                 ),
                                 box FieldElementExpression::Identifier("alternative".to_string())
@@ -135,13 +143,13 @@ impl Flattener {
     ///
     /// * `statements_flattened` - Vector where new flattened statements can be added.
     /// * `condition` - `Condition` that will be flattened.
-    fn flatten_condition<T: Field>(
+    fn flatten_condition(
         &mut self,
-        functions_flattened: &Vec<FlatFunction<T>>,
+        functions_flattened: &Vec<FlatFunction>,
         arguments_flattened: &Vec<FlatParameter>,
-        statements_flattened: &mut Vec<FlatStatement<T>>,
-        condition: BooleanExpression<T>,
-    ) -> BooleanExpression<T> { // those will be booleans in the future
+        statements_flattened: &mut Vec<FlatStatement>,
+        condition: BooleanExpression<Bls12Field>,
+    ) -> BooleanExpression<Bls12Field> { // those will be booleans in the future
         match condition {
             BooleanExpression::Lt(box lhs, box rhs) => {
 
@@ -190,14 +198,14 @@ impl Flattener {
                     }
 
                     // bit decomposition check
-                    let mut lhs_sum = FlatExpression::Number(T::from(0));
+                    let mut lhs_sum = FlatExpression::Number(Bls12Field::from(0));
 
                     for i in 0..self.bits - 2 {
                         lhs_sum = FlatExpression::Add(
                             box lhs_sum,
                             box FlatExpression::Mult(
                                 box FlatExpression::Identifier(format!("{}{}{}", &lhs_name, BINARY_SEPARATOR, i)),
-                                box FlatExpression::Number(T::from(2).pow(i)),
+                                box FlatExpression::Number(Bls12Field::from(2).pow(i)),
                             ),
                         );
                     }
@@ -225,14 +233,14 @@ impl Flattener {
                     }
 
                     // bit decomposition check
-                    let mut rhs_sum = FlatExpression::Number(T::from(0));
+                    let mut rhs_sum = FlatExpression::Number(Bls12Field::from(0));
 
                     for i in 0..self.bits - 2 {
                         rhs_sum = FlatExpression::Add(
                             box rhs_sum,
                             box FlatExpression::Mult(
                                 box FlatExpression::Identifier(format!("{}{}{}", &rhs_name, BINARY_SEPARATOR, i)),
-                                box FlatExpression::Number(T::from(2).pow(i)),
+                                box FlatExpression::Number(Bls12Field::from(2).pow(i)),
                             ),
                         );
                     }
@@ -252,8 +260,8 @@ impl Flattener {
                 statements_flattened.push(FlatStatement::Definition(
                     subtraction_result.to_string(),
                     FlatExpression::Sub(
-                        box FlatExpression::Mult(box FlatExpression::Number(T::from(2)), box FlatExpression::Identifier(lhs_name.to_string())),
-                        box FlatExpression::Mult(box FlatExpression::Number(T::from(2)), box FlatExpression::Identifier(rhs_name.to_string())),
+                        box FlatExpression::Mult(box FlatExpression::Number(Bls12Field::from(2)), box FlatExpression::Identifier(lhs_name.to_string())),
+                        box FlatExpression::Mult(box FlatExpression::Number(Bls12Field::from(2)), box FlatExpression::Identifier(rhs_name.to_string())),
                     ),
                 ));
 
@@ -270,14 +278,14 @@ impl Flattener {
                 }
 
                 // sum(sym_b{i} * 2**i)
-                let mut expr = FlatExpression::Number(T::from(0));
+                let mut expr = FlatExpression::Number(Bls12Field::from(0));
 
                 for i in 0..self.bits {
                     expr = FlatExpression::Add(
                         box expr,
                         box FlatExpression::Mult(
                             box FlatExpression::Identifier(format!("{}{}{}", &subtraction_result, BINARY_SEPARATOR, i)),
-                            box FlatExpression::Number(T::from(2).pow(i)),
+                            box FlatExpression::Number(Bls12Field::from(2).pow(i)),
                         ),
                     );
                 }
@@ -332,10 +340,9 @@ impl Flattener {
 
                 statements_flattened.push(FlatStatement::Definition(name_x.to_string(), x));
                 statements_flattened.push(
-                    FlatStatement::Directive(DirectiveStatement {
+                    FlatStatement::Directive(BellmanDirectiveStatement {
                         outputs: vec![name_y.to_string(), name_m.to_string()],
-                        inputs: vec![name_x.to_string()],
-                        helper: Helper::Rust(RustHelper::ConditionEq(name_x.to_string()))
+                        helper: BellmanHelper::Rust(RustHelper::ConditionEq(name_x.to_string()))
                     })
                 );
                 statements_flattened.push(FlatStatement::Condition(
@@ -344,10 +351,10 @@ impl Flattener {
                 ));
                 statements_flattened.push(FlatStatement::Definition(
                     name_1_y.to_string(),
-                    FlatExpression::Sub(box FlatExpression::Number(T::one()), box FlatExpression::Identifier(name_y.to_string())),
+                    FlatExpression::Sub(box FlatExpression::Number(Bls12Field::one()), box FlatExpression::Identifier(name_y.to_string())),
                 ));
                 statements_flattened.push(FlatStatement::Condition(
-                    FlatExpression::Number(T::zero()),
+                    FlatExpression::Number(Bls12Field::zero()),
                     FlatExpression::Mult(box FlatExpression::Identifier(name_1_y.to_string()), box FlatExpression::Identifier(name_x)),
                 ));
 
@@ -357,28 +364,17 @@ impl Flattener {
         }
     }
 
-    fn flatten_function_call<T: Field>(
+    fn flatten_function_call(
         &mut self,
-        functions_flattened: &Vec<FlatFunction<T>>,
+        functions_flattened: &Vec<FlatFunction>,
         arguments_flattened: &Vec<FlatParameter>,
-        statements_flattened: &mut Vec<FlatStatement<T>>,
+        statements_flattened: &mut Vec<FlatStatement>,
         id: &String,
         return_count: usize,
-        param_expressions: &Vec<TypedExpression<T>>
-    ) -> FlatExpressionList<T> {
+        param_expressions: &Vec<TypedExpression<Bls12Field>>
+    ) -> FlatExpressionList {
         for funct in functions_flattened {
             if funct.id == *id && funct.arguments.len() == (*param_expressions).len() && funct.return_count == return_count {
-                // funct is now the called function
-
-                // Idea: variables are given a prefix.
-                // It consists of the function name followed by a call counter value
-                // e.g.: add_1_a_2
-
-                // Stores prefixed variables
-
-                let mut replacement_map = DirectSubstitution::new();
-
-                // build prefix
                 match self.function_calls.clone().get(&funct.id) {
                     Some(val) => {
                         self.function_calls.insert(funct.id.clone(),val+1);
@@ -391,7 +387,7 @@ impl Flattener {
 
                 // Handle complex parameters and assign values:
                 // Rename Parameters, assign them to values in call. Resolve complex expressions with definitions
-                for (i, param_expr) in param_expressions.clone().into_iter().enumerate() {
+                let flat_params = param_expressions.clone().into_iter().enumerate().map(|(i, param_expr)| {
                     let new_var;
                     let param_expr = param_expr.apply_substitution(&self.substitution);
 
@@ -429,51 +425,19 @@ impl Flattener {
                             }
                         }
                     }
-                    replacement_map.insert(funct.arguments.get(i).unwrap().id.clone(), new_var);
-                }
+                    FlatExpression::Identifier(new_var)
+                }).collect();
 
-                // Ensure Renaming and correct returns:
-                // add all flattened statements, adapt return statement
-                for stat in funct.statements.clone() {
-                    match stat {
-                        // set return statements right side as expression result
-                        FlatStatement::Return(list) => {
-                            return FlatExpressionList {
-                                expressions: list.expressions.into_iter().map(|x| x.apply_substitution(&replacement_map)).collect()
-                            }
-                        },
-                        FlatStatement::Definition(var, rhs) => {
-                            let new_var: String = format!("{}{}", prefix, var.clone());
-                            replacement_map.insert(var, new_var.clone());
-                            let new_rhs = rhs.apply_substitution(&replacement_map);
-                            statements_flattened.push(
-                                FlatStatement::Definition(new_var, new_rhs)
-                            );
-                        },
-                        FlatStatement::Condition(lhs, rhs) => {
-                            let new_lhs = lhs.apply_substitution(&replacement_map);
-                            let new_rhs = rhs.apply_substitution(&replacement_map);
-                            statements_flattened
-                                .push(FlatStatement::Condition(new_lhs, new_rhs));
-                        },
-                        FlatStatement::Directive(d) => {
-                            let new_outputs = d.outputs.iter().map(|o| {
-                                let new_o: String = format!("{}{}", prefix, o.clone());
-                                replacement_map.insert(o.to_string(), new_o.clone());
-                                new_o
-                            }).collect();
-                            let new_inputs = d.inputs.iter().map(|i| replacement_map.get(i).unwrap()).collect();
-                            statements_flattened.push(
-                                FlatStatement::Directive(
-                                    DirectiveStatement {
-                                        outputs: new_outputs,
-                                        inputs: new_inputs,
-                                        helper: d.helper.clone()
-                                    }
-                                )
-                            )
-                        }
-                    }
+                // funct is now the called function
+                statements_flattened.push(
+                    FlatStatement::FunctionCall(
+                        (0..funct.return_count).map(|index| format!("{}{}", prefix, index)).collect(),
+                        funct.id.clone(),
+                        flat_params
+                    )
+                );
+                return FlatExpressionList {
+                    expressions: (0..funct.return_count).map(|index| format!("{}{}", prefix, index)).map(|x| FlatExpression::Identifier(x)).collect()
                 }
             }
         }
@@ -484,13 +448,13 @@ impl Flattener {
         );
     }
 
-    fn flatten_field_expression<T: Field>(
+    fn flatten_field_expression(
         &mut self,
-        functions_flattened: &Vec<FlatFunction<T>>,
+        functions_flattened: &Vec<FlatFunction>,
         arguments_flattened: &Vec<FlatParameter>,
-        statements_flattened: &mut Vec<FlatStatement<T>>,
-        expr: FieldElementExpression<T>,
-    ) -> FlatExpression<T> {
+        statements_flattened: &mut Vec<FlatStatement>,
+        expr: FieldElementExpression<Bls12Field>,
+    ) -> FlatExpression {
         match expr {
             FieldElementExpression::Number(x) => FlatExpression::Number(x), // force to be a field element
             FieldElementExpression::Identifier(x) => FlatExpression::Identifier(x),
@@ -641,16 +605,16 @@ impl Flattener {
             FieldElementExpression::Pow(box base, box exponent) => {
                 // TODO currently assuming that base is number or variable
                 match exponent {
-                    FieldElementExpression::Number(ref x) if x > &T::one() => match base {
+                    FieldElementExpression::Number(ref x) if x > &Bls12Field::one() => match base {
                         FieldElementExpression::Identifier(ref var) => {
-                            let id = if x > &T::from(2) {
+                            let id = if x > &Bls12Field::from(2) {
                                 let tmp_expression = self.flatten_field_expression(
                                     functions_flattened,
                                     arguments_flattened,
                                     statements_flattened,
                                     FieldElementExpression::Pow(
                                         box FieldElementExpression::Identifier(var.to_string()),
-                                        box FieldElementExpression::Number(x.clone() - T::one()),
+                                        box FieldElementExpression::Number(x.clone() - Bls12Field::one()),
                                     ),
                                 );
                                 let new_name = format!("sym_{}", self.next_var_idx);
@@ -705,12 +669,12 @@ impl Flattener {
         }
     }
 
-    pub fn flatten_statement<T: Field>(
+    pub fn flatten_statement(
         &mut self,
-        functions_flattened: &mut Vec<FlatFunction<T>>,
+        functions_flattened: &mut Vec<FlatFunction>,
         arguments_flattened: &Vec<FlatParameter>,
-        statements_flattened: &mut Vec<FlatStatement<T>>,
-        stat: TypedStatement<T>,
+        statements_flattened: &mut Vec<FlatStatement>,
+        stat: TypedStatement<Bls12Field>,
     ) {
         match stat {
             TypedStatement::Return(exprs) => {
@@ -828,7 +792,7 @@ impl Flattener {
                             s,
                         );
                     }
-                    current = T::one() + &current;
+                    current = Bls12Field::one() + &current;
                 }
             }
             TypedStatement::MultipleDefinition(vars, rhs) => {
@@ -877,16 +841,16 @@ impl Flattener {
     ///
     /// * `functions_flattened` - Vector where new flattened functions can be added.
     /// * `funct` - `TypedFunction` that will be flattened.
-    pub fn flatten_function<T: Field>(
+    pub fn flatten_function(
         &mut self,
-        functions_flattened: &mut Vec<FlatFunction<T>>,
-        funct: TypedFunction<T>,
-    ) -> FlatFunction<T> {
+        functions_flattened: &mut Vec<FlatFunction>,
+        funct: TypedFunction<Bls12Field>,
+    ) -> FlatFunction {
         self.variables = HashSet::new();
         self.substitution = DirectSubstitution::new();
         self.next_var_idx = 0;
         let mut arguments_flattened: Vec<FlatParameter> = Vec::new();
-        let mut statements_flattened: Vec<FlatStatement<T>> = Vec::new();
+        let mut statements_flattened: Vec<FlatStatement> = Vec::new();
         // push parameters
         for arg in &funct.arguments {
             let arg_type = arg.id.get_type();
@@ -919,6 +883,39 @@ impl Flattener {
         // the flattened return count is the sum of the primitive elements for each type returned
         let return_count = funct.signature.outputs.iter().map(|output_type| output_type.get_primitive_count()).fold(0, |acc, x| acc + x);
 
+        // turn definitions into directive + condition
+        let statements_flattened = statements_flattened.into_iter().map(|s| match s {
+            FlatStatement::Definition(id, e) => { 
+
+                let (l1, l2) = match e.clone() {
+                    FlatExpression::Mult(box e1, box e2) => {
+                        (e1.into(), e2.into())
+                    },
+                    e @ FlatExpression::Identifier(..) => {
+                        (LinCombMemory(vec![(number_to_fr::<Bls12>(1), "~one".to_string())]), e.into())
+                    },
+                    e @ FlatExpression::Add(..) => {
+                        (LinCombMemory(vec![(number_to_fr::<Bls12>(1), "~one".to_string())]), e.into())
+                    },
+                    e @ FlatExpression::Sub(..) => {
+                        (LinCombMemory(vec![(number_to_fr::<Bls12>(1), "~one".to_string())]), e.into())
+                    }
+                    e => panic!("wrong format in constraint: {}", e)
+                };
+
+                vec![
+                FlatStatement::Directive(BellmanDirectiveStatement {
+                    outputs: vec![id.clone()],
+                    helper: BellmanHelper::RankOne(RankOneHelper {
+                        l1,
+                        l2
+                    }),
+                }),
+                FlatStatement::Condition(FlatExpression::Identifier(id), e)
+            ]},
+            e => vec![e]
+        }).flat_map(|x| x).collect();
+
         FlatFunction {
             id: funct.id.clone(),
             arguments: arguments_flattened,
@@ -932,14 +929,14 @@ impl Flattener {
     /// # Arguments
     ///
     /// * `prog` - `Prog`ram that will be flattened.
-    pub fn flatten_program<T: Field>(&mut self, prog: TypedProg<T>) -> FlatProg<T> {
+    pub fn flatten_program(&mut self, prog: TypedProg<Bls12Field>) -> Program {
         let mut functions_flattened = Vec::new();
 
-        self.load_stdlib(&mut functions_flattened);
+        //self.load_stdlib(&mut functions_flattened);
 
-        for func in prog.imported_functions {
-            functions_flattened.push(func);
-        }
+        // for func in prog.imported_functions {
+        //     functions_flattened.push(func);
+        // }
 
         for func in prog.functions {
             let flattened_func = self.flatten_function(&mut functions_flattened, func);
@@ -948,7 +945,7 @@ impl Flattener {
 
         FlatProg {
             functions: functions_flattened
-        }
+        }.into()
     }
 
 
@@ -990,8 +987,16 @@ impl Flattener {
 
 #[cfg(test)]
 mod multiple_definition {
+    extern crate rand;
+
+    use bellman_absy::Computation;
+    use bellman_absy::number_to_fr;
     use super::*;
-    use field::PrimeField;
+    // We're going to use the Groth16 proving system.
+    use bellman::groth16::{
+        create_random_proof, generate_random_parameters, prepare_verifying_key, verify_proof, Proof,
+    };
+    use field::Bls12Field;
     use types::Type;
     use types::Signature;
     use absy::variable::Variable;
@@ -1004,7 +1009,7 @@ mod multiple_definition {
         // def main()
         //     a, b = foo()
 
-        let mut flattener = Flattener::new(PrimeField::get_required_bits());
+        let mut flattener = Flattener::new(Bls12Field::get_required_bits());
         let mut functions_flattened = vec![
             FlatFunction {
                 id: "foo".to_string(),
@@ -1012,8 +1017,8 @@ mod multiple_definition {
                 statements: vec![FlatStatement::Return(
                     FlatExpressionList {
                         expressions: vec![
-                            FlatExpression::Number(PrimeField::from(1)),
-                            FlatExpression::Number(PrimeField::from(2))
+                            FlatExpression::Number(Bls12Field::from(1)),
+                            FlatExpression::Number(Bls12Field::from(2))
                         ]
                     }
                 )],
@@ -1040,7 +1045,7 @@ mod multiple_definition {
         assert_eq!(
             statements_flattened[0]
             ,
-            FlatStatement::Definition("a".to_string(), FlatExpression::Number(PrimeField::from(1)))
+            FlatStatement::FunctionCall(vec!["foo_i0o2_1_0".to_string(), "foo_i0o2_1_1".to_string()], "foo".to_string(), vec![])
         );
     }
 
@@ -1052,7 +1057,7 @@ mod multiple_definition {
         // def main()
         //     a, b = dup(2)
 
-        let mut flattener = Flattener::new(PrimeField::get_required_bits());
+        let mut flattener = Flattener::new(Bls12Field::get_required_bits());
         let mut functions_flattened = vec![
             FlatFunction {
                 id: "dup".to_string(),
@@ -1075,7 +1080,7 @@ mod multiple_definition {
                 Variable::from("a".to_string()),
                 Variable::from("b".to_string())
             ],
-            TypedExpressionList::FunctionCall("dup".to_string(), vec![TypedExpression::FieldElement(FieldElementExpression::Number(PrimeField::from(2)))], vec![Type::FieldElement, Type::FieldElement])
+            TypedExpressionList::FunctionCall("dup".to_string(), vec![TypedExpression::FieldElement(FieldElementExpression::Number(Bls12Field::from(2)))], vec![Type::FieldElement, Type::FieldElement])
         );
 
         flattener.flatten_statement(
@@ -1086,9 +1091,8 @@ mod multiple_definition {
         );
 
         assert_eq!(
-            statements_flattened[0]
-            ,
-            FlatStatement::Definition("dup_i1o2_1_param_0".to_string(), FlatExpression::Number(PrimeField::from(2)))
+            statements_flattened[1],
+            FlatStatement::FunctionCall(vec!["dup_i1o2_1_0".to_string(), "dup_i1o2_1_1".to_string()], "dup".to_string(), vec![FlatExpression::Identifier("dup_i1o2_1_param_0".to_string())])
         );
     }
 
@@ -1100,7 +1104,7 @@ mod multiple_definition {
         // def main()
         //     a = foo()
 
-        let mut flattener = Flattener::new(PrimeField::get_required_bits());
+        let mut flattener = Flattener::new(Bls12Field::get_required_bits());
         let mut functions_flattened = vec![
             FlatFunction {
                 id: "foo".to_string(),
@@ -1108,7 +1112,7 @@ mod multiple_definition {
                 statements: vec![FlatStatement::Return(
                     FlatExpressionList {
                         expressions: vec![
-                            FlatExpression::Number(PrimeField::from(1))
+                            FlatExpression::Number(Bls12Field::from(1))
                         ]
                     }
                 )],
@@ -1132,7 +1136,7 @@ mod multiple_definition {
         assert_eq!(
             statements_flattened[0]
             ,
-            FlatStatement::Definition("a".to_string(), FlatExpression::Number(PrimeField::from(1)))
+            FlatStatement::FunctionCall(vec!["foo_i0o1_1_0".to_string()], "foo".to_string(), vec![])
         );
     }
 
@@ -1148,7 +1152,7 @@ mod multiple_definition {
         //     a_0 = a + 1
         //     return 1
 
-        let mut flattener = Flattener::new(PrimeField::get_required_bits());
+        let mut flattener = Flattener::new(Bls12Field::get_required_bits());
         let mut functions_flattened = vec![];
 
         let funct = TypedFunction {
@@ -1163,11 +1167,11 @@ mod multiple_definition {
                     Variable::from("a".to_string()), 
                     FieldElementExpression::Add(
                         box FieldElementExpression::Identifier("a".to_string()), 
-                        box FieldElementExpression::Number(PrimeField::from(1))
+                        box FieldElementExpression::Number(Bls12Field::from(1))
                     ).into()
                 ),
                 TypedStatement::Return(
-                    vec![FieldElementExpression::Number(PrimeField::from(1)).into()]
+                    vec![FieldElementExpression::Number(Bls12Field::from(1)).into()]
                 )
             ],
         };
@@ -1179,7 +1183,7 @@ mod multiple_definition {
 
         assert_eq!(
             flat_funct.statements[0],
-            FlatStatement::Definition("a_0".to_string(), FlatExpression::Add(box FlatExpression::Identifier("a".to_string()), box FlatExpression::Number(PrimeField::from(1))))
+            FlatStatement::Definition("a_0".to_string(), FlatExpression::Add(box FlatExpression::Identifier("a".to_string()), box FlatExpression::Number(Bls12Field::from(1))))
         );
     }
 
@@ -1198,14 +1202,14 @@ mod multiple_definition {
         //      should not panic
         //
 
-        let mut flattener = Flattener::new(PrimeField::get_required_bits());
+        let mut flattener = Flattener::new(Bls12Field::get_required_bits());
         let functions = vec![
             TypedFunction {
                 id: "foo".to_string(),
                 arguments: vec![],
                 statements: vec![TypedStatement::Return(
                     vec![
-                            TypedExpression::FieldElement(FieldElementExpression::Number(PrimeField::from(1)))
+                            TypedExpression::FieldElement(FieldElementExpression::Number(Bls12Field::from(1)))
                         ]
                 )],
                 signature: Signature {
@@ -1218,8 +1222,8 @@ mod multiple_definition {
                 arguments: vec![],
                 statements: vec![TypedStatement::Return(
                         vec![
-                            TypedExpression::FieldElement(FieldElementExpression::Number(PrimeField::from(1))),
-                            TypedExpression::FieldElement(FieldElementExpression::Number(PrimeField::from(2)))
+                            TypedExpression::FieldElement(FieldElementExpression::Number(Bls12Field::from(1))),
+                            TypedExpression::FieldElement(FieldElementExpression::Number(Bls12Field::from(2)))
                         ]
                 )],
                 signature: Signature {
@@ -1231,10 +1235,10 @@ mod multiple_definition {
                 id: "main".to_string(),
                 arguments: vec![],
                 statements: vec![
-                    TypedStatement::Definition(Variable::from("a".to_string()), TypedExpression::FieldElement(FieldElementExpression::FunctionCall("foo".to_string(), vec![]))),
+                    TypedStatement::MultipleDefinition(vec![Variable::from("a".to_string())], TypedExpressionList::FunctionCall("foo".to_string(), vec![], vec![Type::FieldElement])),
                     TypedStatement::MultipleDefinition(vec![Variable::from("b".to_string()), Variable::from("c".to_string())], TypedExpressionList::FunctionCall("foo".to_string(), vec![], vec![Type::FieldElement, Type::FieldElement])),
                     TypedStatement::Return(
-                        vec![TypedExpression::FieldElement(FieldElementExpression::Number(PrimeField::from(1)))]
+                        vec![TypedExpression::FieldElement(FieldElementExpression::Number(Bls12Field::from(1)))]
                     )
                 ],
                 signature: Signature {
@@ -1244,7 +1248,7 @@ mod multiple_definition {
             }
         ];
 
-        flattener.flatten_program(
+        let res = flattener.flatten_program(
             TypedProg {
                 functions: functions,
                 imported_functions: vec![],
@@ -1261,16 +1265,16 @@ mod multiple_definition {
         let expression = 
             FieldElementExpression::IfElse(
                 box BooleanExpression::Eq(
-                    box FieldElementExpression::Number(PrimeField::from(32)),
-                    box FieldElementExpression::Number(PrimeField::from(4))
+                    box FieldElementExpression::Number(Bls12Field::from(32)),
+                    box FieldElementExpression::Number(Bls12Field::from(4))
                 ),
-                box FieldElementExpression::Number(PrimeField::from(12)),
-                box FieldElementExpression::Number(PrimeField::from(51)),
+                box FieldElementExpression::Number(Bls12Field::from(12)),
+                box FieldElementExpression::Number(Bls12Field::from(51)),
             );
 
 
         let mut functions_flattened = vec![];
-        let mut flattener = Flattener::new(PrimeField::get_required_bits());
+        let mut flattener = Flattener::new(Bls12Field::get_required_bits());
 
         flattener.load_stdlib(&mut functions_flattened);
 
@@ -1280,6 +1284,104 @@ mod multiple_definition {
             &mut vec![],
             expression
         );
+    }
+
+    #[test]
+    fn typed_to_proof() {
+        use self::rand::thread_rng;
+
+        let rng = &mut thread_rng();
+
+        let functions: Vec<TypedFunction<Bls12Field>> = vec![
+            TypedFunction {
+                id: "main".to_string(),
+                arguments: vec![Parameter { id: Variable::from("x"), private: true }],
+                statements: vec![
+                    TypedStatement::Definition(
+                        Variable::from("y".to_string()),
+                        FieldElementExpression::Pow(box FieldElementExpression::Identifier("x".to_string()), box FieldElementExpression::Number(Bls12Field::from(7))).into()
+                    ),
+                    TypedStatement::Return(
+                        vec![TypedExpression::FieldElement(FieldElementExpression::Identifier("y".to_string()))]
+                    )
+                ],
+                signature: Signature {
+                    inputs: vec![Type::FieldElement],
+                    outputs: vec![Type::FieldElement]
+                },
+            }
+        ];
+
+        let program = TypedProg {
+            functions,
+            imported_functions: vec![],
+            imports: vec![]
+        };
+
+        let mut flattener = Flattener::new(Bls12Field::get_required_bits());
+
+        let program = flattener.flatten_program(program);
+
+        let computation = Computation {
+            program,
+            inputs: vec![number_to_fr::<Bls12>(3)]
+        };
+
+        println!("Creating parameters...");
+
+        let params = generate_random_parameters(computation, rng).unwrap();
+
+        // Prepare the verification key (for proof verification)
+        let pvk = prepare_verifying_key(&params.vk);
+
+        println!("Creating proofs...");
+
+        let mut proof_vec = vec![];
+
+        let functions: Vec<TypedFunction<Bls12Field>> = vec![
+            TypedFunction {
+                id: "main".to_string(),
+                arguments: vec![Parameter { id: Variable::from("x"), private: true }],
+                statements: vec![
+                    TypedStatement::Definition(
+                        Variable::from("y".to_string()),
+                        FieldElementExpression::Pow(box FieldElementExpression::Identifier("x".to_string()), box FieldElementExpression::Number(Bls12Field::from(7))).into()
+                    ),
+                    TypedStatement::Return(
+                        vec![TypedExpression::FieldElement(FieldElementExpression::Identifier("y".to_string()))]
+                    )
+                ],
+                signature: Signature {
+                    inputs: vec![Type::FieldElement],
+                    outputs: vec![Type::FieldElement]
+                },
+            }
+        ];
+
+        let program = TypedProg {
+            functions,
+            imported_functions: vec![],
+            imports: vec![]
+        };
+
+        let mut flattener = Flattener::new(Bls12Field::get_required_bits());
+
+        let program = flattener.flatten_program(program);
+
+        let computation = Computation {
+            program,
+            inputs: vec![number_to_fr::<Bls12>(3)]
+        };
+
+        // Create a groth16 proof with our parameters.
+        let proof = create_random_proof(computation, &params, rng).unwrap();
+
+        proof.write(&mut proof_vec).unwrap();
+
+        let proof = Proof::read(&proof_vec[..]).unwrap();
+
+        // Check the proof
+        assert!(verify_proof(&pvk, &proof, &[number_to_fr::<Bls12>(2187)]).unwrap());
     }
 
 }

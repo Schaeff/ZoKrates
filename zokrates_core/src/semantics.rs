@@ -408,7 +408,7 @@ impl Checker {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use field::FieldPrime;
+	use field::PrimeField;
 	use absy::parameter::Parameter;
 
 	pub fn new_with_args(scope: HashSet<ScopedVariable>, level: usize, functions: HashSet<FunctionDeclaration>) -> Checker {
@@ -423,7 +423,7 @@ mod tests {
 	fn undefined_variable_in_statement() {
 		// a = b
 		// b undefined
-		let statement: Statement<FieldPrime> = Statement::Definition(
+		let statement: Statement<PrimeField> = Statement::Definition(
 			Variable::from("a"),
 			Expression::Identifier(String::from("b"))
 		);
@@ -435,7 +435,7 @@ mod tests {
 	fn defined_variable_in_statement() {
 		// a = b
 		// b defined
-		let statement: Statement<FieldPrime> = Statement::Definition(
+		let statement: Statement<PrimeField> = Statement::Definition(
 			Variable::from("a"),
 			Expression::Identifier(String::from("b"))
 		);
@@ -463,10 +463,10 @@ mod tests {
 		//   return a
 		// should fail
 		let foo_args = Vec::<Parameter>::new();
-		let mut foo_statements = Vec::<Statement<FieldPrime>>::new();
+		let mut foo_statements = Vec::<Statement<PrimeField>>::new();
 		foo_statements.push(Statement::Definition(
 			Variable::from("a"),
-			Expression::Number(FieldPrime::from(1)))
+			Expression::Number(PrimeField::from(1)))
 		);
 		let foo = Function {
             id: "foo".to_string(),
@@ -479,7 +479,7 @@ mod tests {
         };
 
         let bar_args = Vec::<Parameter>::new();
-		let mut bar_statements = Vec::<Statement<FieldPrime>>::new();
+		let mut bar_statements = Vec::<Statement<PrimeField>>::new();
 		bar_statements.push(Statement::Return(
 			ExpressionList {
 				expressions: vec![Expression::Identifier(String::from("a"))]
@@ -495,7 +495,7 @@ mod tests {
             }
         };
 
-        let mut funcs = Vec::<Function<FieldPrime>>::new();
+        let mut funcs = Vec::<Function<PrimeField>>::new();
         funcs.push(foo);
         funcs.push(bar);
         let prog = Prog {
@@ -522,7 +522,7 @@ mod tests {
 		let foo_statements = vec![
 			Statement::Definition(
 				Variable::from("a"),
-				Expression::Number(FieldPrime::from(1)))
+				Expression::Number(PrimeField::from(1)))
 		];
 
 		let foo = Function {
@@ -539,7 +539,7 @@ mod tests {
 		let bar_statements = vec![
 			Statement::Definition(
 				Variable::from("a"),
-				Expression::Number(FieldPrime::from(2))
+				Expression::Number(PrimeField::from(2))
 			),
 			Statement::Return(
 				ExpressionList {
@@ -561,7 +561,7 @@ mod tests {
 		let main_statements = vec![
 			Statement::Return(
 				ExpressionList {
-					expressions: vec![Expression::Number(FieldPrime::from(1))]
+					expressions: vec![Expression::Number(PrimeField::from(1))]
 				})
 		];
 
@@ -575,7 +575,7 @@ mod tests {
             }
         };
 
-        let mut funcs = Vec::<Function<FieldPrime>>::new();
+        let mut funcs = Vec::<Function<PrimeField>>::new();
         funcs.push(foo);
         funcs.push(bar);
         funcs.push(main);
@@ -596,12 +596,12 @@ mod tests {
 		//   endfor
 		//   return i
 		// should fail
-		let mut foo_statements = Vec::<Statement<FieldPrime>>::new();
+		let mut foo_statements = Vec::<Statement<PrimeField>>::new();
 		foo_statements.push(Statement::For(
 			Variable::from("i"),
-			FieldPrime::from(0),
-			FieldPrime::from(10),
-			Vec::<Statement<FieldPrime>>::new())
+			PrimeField::from(0),
+			PrimeField::from(10),
+			Vec::<Statement<PrimeField>>::new())
 		);
 		foo_statements.push(Statement::Return(
 			ExpressionList {
@@ -629,21 +629,21 @@ mod tests {
 		//     a = i
 		//   endfor
 		// should pass
-		let mut foo_statements = Vec::<Statement<FieldPrime>>::new();
-		let mut for_statements = Vec::<Statement<FieldPrime>>::new();
+		let mut foo_statements = Vec::<Statement<PrimeField>>::new();
+		let mut for_statements = Vec::<Statement<PrimeField>>::new();
 		for_statements.push(Statement::Definition(
 			Variable::from("a"),
 			Expression::Identifier(String::from("i"))
 		));
 		foo_statements.push(Statement::For(
 			Variable::from("i"),
-			FieldPrime::from(0),
-			FieldPrime::from(10),
+			PrimeField::from(0),
+			PrimeField::from(10),
 			for_statements
 		));
 
-		let mut foo_statements_checked = Vec::<TypedStatement<FieldPrime>>::new();
-		let mut for_statements_checked = Vec::<TypedStatement<FieldPrime>>::new();
+		let mut foo_statements_checked = Vec::<TypedStatement<PrimeField>>::new();
+		let mut for_statements_checked = Vec::<TypedStatement<PrimeField>>::new();
 
 		for_statements_checked.push(TypedStatement::Definition(
 			Variable::from("a"),
@@ -652,8 +652,8 @@ mod tests {
 
 		foo_statements_checked.push(TypedStatement::For(
 			Variable::from("i"),
-			FieldPrime::from(0),
-			FieldPrime::from(10),
+			PrimeField::from(0),
+			PrimeField::from(10),
 			for_statements_checked
 		));
 
@@ -689,7 +689,7 @@ mod tests {
 		// def bar():
 		//   c = foo()
 		// should fail
-		let bar_statements: Vec<Statement<FieldPrime>> = vec![Statement::MultipleDefinition(
+		let bar_statements: Vec<Statement<PrimeField>> = vec![Statement::MultipleDefinition(
 			vec![Variable::from("a")],
 			Expression::FunctionCall("foo".to_string(), vec![])
 		)];
@@ -726,8 +726,8 @@ mod tests {
 		// def bar():
 		//   4 == foo()
 		// should fail
-		let bar_statements: Vec<Statement<FieldPrime>> = vec![Statement::Condition(
-			Expression::Number(FieldPrime::from(2)),
+		let bar_statements: Vec<Statement<PrimeField>> = vec![Statement::Condition(
+			Expression::Number(PrimeField::from(2)),
 			Expression::FunctionCall("foo".to_string(), vec![])
 		)];
 
@@ -761,7 +761,7 @@ mod tests {
 		// def bar():
 		//   c = foo()
 		// should fail
-		let bar_statements: Vec<Statement<FieldPrime>> = vec![Statement::MultipleDefinition(
+		let bar_statements: Vec<Statement<PrimeField>> = vec![Statement::MultipleDefinition(
 			vec![Variable::from("a")],
 			Expression::FunctionCall("foo".to_string(), vec![])
 		)];
@@ -789,11 +789,11 @@ mod tests {
 		// 	return 1
 		// should fail
 
-		let foo_statements: Vec<Statement<FieldPrime>> = vec![Statement::Return(
+		let foo_statements: Vec<Statement<PrimeField>> = vec![Statement::Return(
 			ExpressionList {
 				expressions: vec![
-					Expression::Number(FieldPrime::from(1)),
-					Expression::Number(FieldPrime::from(2))
+					Expression::Number(PrimeField::from(1)),
+					Expression::Number(PrimeField::from(2))
 				]
 			}
 		)];
@@ -808,7 +808,7 @@ mod tests {
 			}
 		};
 
-		let main_statements: Vec<Statement<FieldPrime>> = vec![
+		let main_statements: Vec<Statement<PrimeField>> = vec![
 			Statement::MultipleDefinition(
 				vec![Variable::from("a"), Variable::from("b")],
 				Expression::FunctionCall("foo".to_string(), vec![
@@ -817,7 +817,7 @@ mod tests {
 			),
 			Statement::Return(ExpressionList { 
 				expressions: vec![
-					Expression::Number(FieldPrime::from(1))
+					Expression::Number(PrimeField::from(1))
 				]
 			})
 		];
@@ -847,8 +847,8 @@ mod tests {
 		// def bar():
 		//   1 = foo()
 		// should fail
-		let bar_statements: Vec<Statement<FieldPrime>> = vec![Statement::Condition(
-			Expression::Number(FieldPrime::from(1)),
+		let bar_statements: Vec<Statement<PrimeField>> = vec![Statement::Condition(
+			Expression::Number(PrimeField::from(1)),
 			Expression::FunctionCall("foo".to_string(), vec![])
 		)];
 
@@ -871,7 +871,7 @@ mod tests {
 		// def bar():
 		//   return a, b
 		// should fail
-		let bar_statements: Vec<Statement<FieldPrime>> = vec![Statement::Return(
+		let bar_statements: Vec<Statement<PrimeField>> = vec![Statement::Return(
 			ExpressionList { expressions: vec![
 				Expression::Identifier("a".to_string()),
 				Expression::Identifier("b".to_string())
@@ -901,7 +901,7 @@ mod tests {
 		//   return a + b
 		//
 		// should pass
-		let bar_statements: Vec<Statement<FieldPrime>> = vec![
+		let bar_statements: Vec<Statement<PrimeField>> = vec![
 			Statement::MultipleDefinition(
 				vec![Variable::from("a"), Variable::from("b")],
 				Expression::FunctionCall("foo".to_string(), vec![])
@@ -916,7 +916,7 @@ mod tests {
 			)
 		];
 
-		let bar_statements_checked: Vec<TypedStatement<FieldPrime>> = vec![
+		let bar_statements_checked: Vec<TypedStatement<PrimeField>> = vec![
 			TypedStatement::MultipleDefinition(
 				vec![Variable::from("a"), Variable::from("b")],
 				TypedExpressionList::FunctionCall("foo".to_string(), vec![], vec![Type::FieldElement, Type::FieldElement])
@@ -972,11 +972,11 @@ mod tests {
 		//   return 2
 		//
 		// should fail
-		let foo2_statements: Vec<Statement<FieldPrime>> = vec![
+		let foo2_statements: Vec<Statement<PrimeField>> = vec![
 			Statement::Return(
 				ExpressionList {
 					expressions: vec![
-						Expression::Number(FieldPrime::from(1))
+						Expression::Number(PrimeField::from(1))
 					]
 				}
 			)
@@ -1020,11 +1020,11 @@ mod tests {
 		//   return 1
 		//
 		// should fail
-		let main1_statements: Vec<Statement<FieldPrime>> = vec![
+		let main1_statements: Vec<Statement<PrimeField>> = vec![
 			Statement::Return(
 				ExpressionList {
 					expressions: vec![
-						Expression::Number(FieldPrime::from(1))
+						Expression::Number(PrimeField::from(1))
 					]
 				}
 			)
@@ -1032,11 +1032,11 @@ mod tests {
 
 		let main1_arguments = vec![Parameter { id: Variable::from("a"), private: false }];
 
-		let main2_statements: Vec<Statement<FieldPrime>> = vec![
+		let main2_statements: Vec<Statement<PrimeField>> = vec![
 			Statement::Return(
 				ExpressionList {
 					expressions: vec![
-						Expression::Number(FieldPrime::from(1))
+						Expression::Number(PrimeField::from(1))
 					]
 				}
 			)

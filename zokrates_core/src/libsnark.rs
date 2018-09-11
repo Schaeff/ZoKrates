@@ -214,7 +214,7 @@ fn vec_as_u8_32_array(vec: &Vec<u8>) -> [u8; 32] {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use field::FieldPrime;
+    use field::PrimeField;
     use num::bigint::BigUint;
     use serde_json;
     use flat_absy::*;
@@ -231,7 +231,7 @@ mod tests {
 
         #[test]
         fn can_generate_sha_256_witness_null() {
-            let inputs = vec![FieldPrime::from(0); 512];
+            let inputs = vec![PrimeField::from(0); 512];
             let _b = get_sha256_witness(&inputs);
         }
 
@@ -239,7 +239,7 @@ mod tests {
         fn can_generate_flattened_code() {
             let constraints = get_sha256_constraints();
             let r1cs: standard::R1CS = serde_json::from_str(&constraints).unwrap();
-            let _prog: FlatProg<FieldPrime> = FlatProg::from(r1cs);
+            let _prog: FlatProg<PrimeField> = FlatProg::from(r1cs);
         }
     }
 
@@ -255,7 +255,7 @@ mod tests {
                     10
                 ).unwrap()
                     .to_bytes_le(),
-                FieldPrime::from(
+                PrimeField::from(
                     "5472060717959818805561601436314318772174077789324455915672259473661306552146"
                 ).into_byte_vector()
             );
@@ -265,13 +265,13 @@ mod tests {
         fn serialization_bin() {
             assert_eq!(
                 BigUint::parse_bytes(b"110000011001000100111001110010111000010011000110100000001010011011100001010000010001011011011010000001100000010101100001011101100101111000000101101010100100010110100001110001110010101000110100111100001000001000110000010110110110000111110011111101010010",2).unwrap().to_bytes_le(),
-                FieldPrime::from("5472060717959818805561601436314318772174077789324455915672259473661306552146").into_byte_vector()
+                PrimeField::from("5472060717959818805561601436314318772174077789324455915672259473661306552146").into_byte_vector()
             );
         }
 
         #[test]
         fn vec_to_array() {
-            let byte_vector: Vec<u8> = FieldPrime::from(
+            let byte_vector: Vec<u8> = PrimeField::from(
                 "5472060717959818805561601436314318772174077789324455915672259473661306552146",
             ).into_byte_vector();
             let array: [u8; 32] = vec_as_u8_32_array(&byte_vector);

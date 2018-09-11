@@ -16,7 +16,7 @@ use std::io::{BufWriter, Write, BufReader, BufRead, stdin};
 use std::collections::HashMap;
 use std::string::String;
 use zokrates_core::compile::compile;
-use zokrates_core::field::{Field, FieldPrime};
+use zokrates_core::field::{Field, PrimeField};
 use zokrates_core::r1cs::{r1cs_program};
 use zokrates_core::flat_absy::FlatProg;
 use clap::{App, AppSettings, Arg, SubCommand};
@@ -215,7 +215,7 @@ fn main() {
 
             let mut reader = BufReader::new(file);
             
-            let program_flattened: FlatProg<FieldPrime> = match compile(&mut reader, location, Some(fs_resolve), should_optimize, should_include_gadgets) {
+            let program_flattened: FlatProg<PrimeField> = match compile(&mut reader, location, Some(fs_resolve), should_optimize, should_include_gadgets) {
                 Ok(p) => p,
                 Err(why) => panic!("Compilation failed: {}", why)
             };
@@ -269,7 +269,7 @@ fn main() {
                 Err(why) => panic!("couldn't open {}: {}", path.display(), why),
             };
 
-            let program_ast: FlatProg<FieldPrime> = match deserialize_from(&mut file, Infinite) {
+            let program_ast: FlatProg<PrimeField> = match deserialize_from(&mut file, Infinite) {
                 Ok(x) => x,
                 Err(why) => {
                     println!("{:?}", why);
@@ -287,11 +287,11 @@ fn main() {
             println!("{}", main_flattened);
 
             // validate #arguments
-            let mut cli_arguments: Vec<FieldPrime> = Vec::new();
+            let mut cli_arguments: Vec<PrimeField> = Vec::new();
             match sub_matches.values_of("arguments"){
                 Some(p) => {
                     let arg_strings: Vec<&str> = p.collect();
-                    cli_arguments = arg_strings.into_iter().map(|x| FieldPrime::from(x)).collect();
+                    cli_arguments = arg_strings.into_iter().map(|x| PrimeField::from(x)).collect();
                 },
                 None => {
                 }
@@ -320,7 +320,7 @@ fn main() {
                             .lock()
                             .read_line(&mut input)
                             .expect("Did not enter a correct String");
-                        FieldPrime::from(input.trim())
+                        PrimeField::from(input.trim())
                     }
                     // otherwise, they are taken from the CLI arguments
                     false => {
@@ -359,7 +359,7 @@ fn main() {
                 Err(why) => panic!("couldn't open {}: {}", path.display(), why),
             };
 
-            let program_ast: FlatProg<FieldPrime> = match deserialize_from(&mut file, Infinite) {
+            let program_ast: FlatProg<PrimeField> = match deserialize_from(&mut file, Infinite) {
                 Ok(x) => x,
                 Err(why) => {
                     println!("{:?}", why);
@@ -485,7 +485,7 @@ fn main() {
                 match lines.next() {
                     Some(Ok(ref x)) => {
                         let pairs: Vec<&str> = x.split_whitespace().collect();
-                        witness_map.insert(pairs[0].to_string(),FieldPrime::from_dec_string(pairs[1].to_string()));
+                        witness_map.insert(pairs[0].to_string(),PrimeField::from_dec_string(pairs[1].to_string()));
                     },
                     None => break,
                     Some(Err(err)) => panic!("Error reading witness: {}", err),
@@ -564,7 +564,7 @@ mod tests {
 
             let mut reader = BufReader::new(file);
 
-            let program_flattened: FlatProg<FieldPrime> =
+            let program_flattened: FlatProg<PrimeField> =
                 compile(&mut reader, path, Some(fs_resolve), true, false).unwrap();
 
             let (..) = r1cs_program(&program_flattened);
@@ -585,11 +585,11 @@ mod tests {
 
             let mut reader = BufReader::new(file);
 
-            let program_flattened: FlatProg<FieldPrime> =
+            let program_flattened: FlatProg<PrimeField> =
                 compile(&mut reader, path, Some(fs_resolve), true, false).unwrap();
 
             let (..) = r1cs_program(&program_flattened);
-            let _ = program_flattened.get_witness(vec![FieldPrime::from(0)]).unwrap();
+            let _ = program_flattened.get_witness(vec![PrimeField::from(0)]).unwrap();
         }
     }
 
@@ -607,13 +607,13 @@ mod tests {
 
             let mut reader = BufReader::new(file);
 
-            let program_flattened: FlatProg<FieldPrime> =
+            let program_flattened: FlatProg<PrimeField> =
                 compile(&mut reader, path, Some(fs_resolve), true, false).unwrap();
 
             let (..) = r1cs_program(&program_flattened);
 
             let result = std::panic::catch_unwind(|| {
-                let _ = program_flattened.get_witness(vec![FieldPrime::from(0)]).unwrap();
+                let _ = program_flattened.get_witness(vec![PrimeField::from(0)]).unwrap();
             });
             assert!(result.is_err());
         }

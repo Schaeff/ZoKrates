@@ -130,7 +130,7 @@ impl<T: Field> Into<FlatFunction<T>> for R1CS {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use field::FieldPrime;
+	use field::PrimeField;
 	use serde_json;
 
 	#[test]
@@ -143,7 +143,7 @@ mod tests {
 	fn constraint_into_flat_statement() {
 		let constraint = r#"[{"2026": "1"}, {"0": "1", "2026": "1751751751751751751751751751751751751751751"}, {"0": "0"}]"#;
 		let c: Constraint = serde_json::from_str(constraint).unwrap();
-		let _statement: FlatStatement<FieldPrime> = c.into();
+		let _statement: FlatStatement<PrimeField> = c.into();
 	}
 }
 

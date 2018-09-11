@@ -214,11 +214,21 @@ fn parse_statement1<T: Field>(
             Ok((e2, s2, p2)) => match next_token(&s2, &p2) {
                 (Token::InlineComment(_), ref s3, _) => {
                     assert_eq!(s3, "");
-                    Ok((Statement::Definition(Variable::from(ide), e2), s2, p2))
+                    match e2 {
+                        e2 @ Expression::FunctionCall(..) => {
+                            Ok((Statement::MultipleDefinition(vec![Variable::from(ide)], e2), s2, p2))
+                        },
+                        e2 => Ok((Statement::Definition(Variable::from(ide), e2), s2, p2))
+                    }
                 }
                 (Token::Unknown(ref t3), ref s3, _) if t3 == "" => {
                     assert_eq!(s3, "");
-                    Ok((Statement::Definition(Variable::from(ide), e2), s2, p2))
+                    match e2 {
+                        e2 @ Expression::FunctionCall(..) => {
+                            Ok((Statement::MultipleDefinition(vec![Variable::from(ide)], e2), s2, p2))
+                        },
+                        e2 => Ok((Statement::Definition(Variable::from(ide), e2), s2, p2))
+                    }
                 }
                 (t3, _, p3) => {
                     Err(Error {
@@ -366,7 +376,7 @@ fn parse_comma_separated_identifier_list_rec<T: Field>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use field::FieldPrime;
+    use field::PrimeField;
 
     mod parse_statement1 {
         use super::*;
@@ -376,7 +386,7 @@ mod tests {
             let string = String::from("() == 1");
             let cond = Statement::Condition(
                 Expression::FunctionCall(String::from("foo"), vec![]),
-                Expression::Number(FieldPrime::from(1))
+                Expression::Number(PrimeField::from(1))
             );
             assert_eq!(Ok((cond, String::from(""), pos.col(string.len() as isize))),
                 parse_statement1(String::from("foo"), string, pos)

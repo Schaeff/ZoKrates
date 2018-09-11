@@ -68,13 +68,13 @@ pub fn parse_import<T: Field>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use field::FieldPrime;
+    use field::PrimeField;
 
     #[test]
     fn quoted_path() {
         let pos = Position { line: 45, col: 121 };
         let string = String::from("./foo.code\" as foo");
-        let path: Token<FieldPrime> = Token::Path("./foo.code".to_string());
+        let path: Token<PrimeField> = Token::Path("./foo.code".to_string());
         assert_eq!(
             (path, " as foo".to_string(), pos.col(11 as isize)),
             parse_quoted_path(&string, &pos)
@@ -85,7 +85,7 @@ mod tests {
     fn import() {
         let pos = Position { line: 45, col: 121 };
         let string = String::from("import \"./foo.code\"");
-        let import: Token<FieldPrime> = Token::Import;
+        let import: Token<PrimeField> = Token::Import;
         assert_eq!(
             (import, "\"./foo.code\"".to_string(), pos.col(7 as isize)),
             next_token(&string, &pos)
@@ -103,7 +103,7 @@ mod tests {
         };
         assert_eq!(
             Ok((import, position)),
-            parse_import::<FieldPrime>(&string, &pos)
+            parse_import::<PrimeField>(&string, &pos)
         )
     }
 
@@ -119,7 +119,7 @@ mod tests {
         };
         assert_eq!(
             Ok((import, position)),
-            parse_import::<FieldPrime>(&string, &pos)
+            parse_import::<PrimeField>(&string, &pos)
         )
     }
 }
