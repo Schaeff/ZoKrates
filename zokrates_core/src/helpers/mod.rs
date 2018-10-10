@@ -44,7 +44,8 @@ impl fmt::Display for DirectiveStatement {
 pub enum Helper {
 	#[cfg(feature = "libsnark")]
 	LibsnarkGadget(LibsnarkGadgetHelper),
-	Rust(RustHelper)
+	Rust(RustHelper),
+	Wasm(usize),
 }
 
 impl fmt::Display for Helper {
@@ -52,7 +53,8 @@ impl fmt::Display for Helper {
     	match *self {
     		#[cfg(feature = "libsnark")]
     		Helper::LibsnarkGadget(ref h) => write!(f, "LibsnarkGadget::{}", h),
-    		Helper::Rust(ref h) => write!(f, "Rust::{}", h)
+    		Helper::Rust(ref h) => write!(f, "Rust::{}", h),
+    		Helper::Wasm(ref code) => write!(f, "Wasm::{}", code),
     	}
     }
 }
@@ -74,7 +76,8 @@ impl<T: Field> Executable<T> for Helper {
 		let result = match self {
 			#[cfg(feature = "libsnark")]
 			Helper::LibsnarkGadget(helper) => helper.execute(inputs),
-			Helper::Rust(helper) => helper.execute(inputs)
+			Helper::Rust(helper) => helper.execute(inputs),
+			Helper::Wasm(code) => unimplemented!(),
 		};
 
 		match result {
@@ -89,7 +92,8 @@ impl Signed for Helper {
 		match self {
 			#[cfg(feature = "libsnark")]
 			Helper::LibsnarkGadget(helper) => helper.get_signature(),
-			Helper::Rust(helper) => helper.get_signature()
+			Helper::Rust(helper) => helper.get_signature(),
+			Helper::Wasm(code) => unimplemented!(),
 		}
 	}
 }
