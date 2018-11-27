@@ -241,7 +241,7 @@ fn parse_factor1<T: Field>(
 }
 
 // parse an identifier or select or function call
-fn parse_identified1<T: Field>(
+pub fn parse_identified1<T: Field>(
     x: String,
     input: String,
     position: Position,
