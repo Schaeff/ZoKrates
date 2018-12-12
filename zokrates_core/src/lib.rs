@@ -18,6 +18,7 @@ mod helpers;
 mod imports;
 mod optimizer;
 mod parser;
+mod recursive_absy;
 mod semantics;
 #[cfg(feature = "libsnark")]
 mod standard;
